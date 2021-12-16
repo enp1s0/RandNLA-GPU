@@ -13,8 +13,16 @@ void evaluate(
 		mtk::rsvd_test::rsvd_base& rsvd,
 		const unsigned n_tests
 		) {
+	std::printf("%s,%u,%u,%u,%u,%u,",
+			test_name.c_str(),
+			rsvd.get_m(),
+			rsvd.get_n(),
+			rsvd.get_k(),
+			rsvd.get_p(),
+			rsvd.get_n_svdj_iter()
+			);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
-	const auto S_size = rsvd.get_k() + rsvd.get_p();
+	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
 	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
 	const auto Vt_size = rsvd.get_n() * (rsvd.get_k() + rsvd.get_p());
 
@@ -29,6 +37,8 @@ void evaluate(
 	rsvd.prepare();
 
 	rsvd.run();
+
+	std::printf("%u\n", n_tests);
 }
 } // noname namespace
 
@@ -40,11 +50,14 @@ int main() {
 	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
 		for (unsigned log_n = 5; log_n <= max_log_n; log_n++) {
 			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned log_k = 5; max_log_k; log_k++) {
+			for (unsigned log_k = 4; max_log_k - 1; log_k++) {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
 				const auto p = k / 10;
+				if (k + p > std::min(m, n)) {
+					break;
+				}
 
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
