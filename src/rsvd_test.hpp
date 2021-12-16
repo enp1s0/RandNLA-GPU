@@ -11,18 +11,18 @@ protected:
 	const unsigned m;
 	const unsigned n;
 
-	float* const A_ptr;
+	float* A_ptr;
 	const unsigned lda;
 
 	const unsigned k;
 	const unsigned p;
 
-	float* const U_ptr;
+	float* U_ptr;
 	const unsigned ldu;
 
-	float* const S_ptr;
+	float* S_ptr;
 
-	float* const Vt_ptr;
+	float* Vt_ptr;
 	const unsigned ldvt;
 
 	const unsigned n_svdj_iter;
@@ -44,8 +44,29 @@ protected:
 		S_ptr(S_ptr),
 		Vt_ptr(Vt_ptr), ldvt(ldvt) {}
 
+public:
 	virtual void prepare() = 0;
 	virtual void run() = 0;
+
+	unsigned get_m() const {return m;}
+	unsigned get_n() const {return n;}
+	unsigned get_k() const {return k;}
+	unsigned get_p() const {return p;}
+
+	void set_input_ptr(
+			float* const A
+			) {
+		A_ptr = A;
+	}
+	void set_output_ptr(
+			float* const U,
+			float* const S,
+			float* const Vt
+			) {
+		U_ptr = U;
+		S_ptr = S;
+		Vt_ptr = Vt;
+	}
 };
 
 class rsvd_cusolver : public rsvd_base {
