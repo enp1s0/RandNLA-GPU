@@ -52,6 +52,7 @@ public:
 	unsigned get_n() const {return n;}
 	unsigned get_k() const {return k;}
 	unsigned get_p() const {return p;}
+	unsigned get_n_svdj_iter() const {return n_svdj_iter;}
 
 	void set_input_ptr(
 			float* const A
