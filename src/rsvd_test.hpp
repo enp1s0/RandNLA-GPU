@@ -22,8 +22,8 @@ protected:
 
 	float* S_ptr;
 
-	float* Vt_ptr;
-	const unsigned ldvt;
+	float* V_ptr;
+	const unsigned ldv;
 
 	const unsigned n_svdj_iter;
 protected:
@@ -34,7 +34,7 @@ protected:
 		float* const A_ptr, const unsigned lda,
 		float* const U_ptr, const unsigned ldu,
 		float* const S_ptr,
-		float* const Vt_ptr, const unsigned ldvt
+		float* const V_ptr, const unsigned ldv
 		):
 		m(m), n(n),
 		k(k), p(p),
@@ -42,7 +42,7 @@ protected:
 		A_ptr(A_ptr), lda(lda),
 		U_ptr(U_ptr), ldu(ldu),
 		S_ptr(S_ptr),
-		Vt_ptr(Vt_ptr), ldvt(ldvt) {}
+		V_ptr(V_ptr), ldv(ldv) {}
 
 public:
 	virtual void prepare() = 0;
@@ -62,11 +62,11 @@ public:
 	void set_output_ptr(
 			float* const U,
 			float* const S,
-			float* const Vt
+			float* const V
 			) {
 		U_ptr = U;
 		S_ptr = S;
-		Vt_ptr = Vt;
+		V_ptr = V;
 	}
 };
 
@@ -92,11 +92,11 @@ public:
 		float* const A_ptr, const unsigned lda,
 		float* const U_ptr, const unsigned ldu,
 		float* const S_ptr,
-		float* const Vt_ptr, const unsigned ldvt
+		float* const V_ptr, const unsigned ldv
 		):
 		cusolver_handle(cusolver_handle),
 		cusolver_params(cusolver_params),
-		rsvd_base(m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, Vt_ptr, ldvt) {}
+		rsvd_base(m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv) {}
 
 	void prepare();
 	void run();

@@ -15,7 +15,7 @@ void mtk::rsvd_test::rsvd_cusolver::prepare() {
 				cutf::type::get_data_type<float>(),
 				U_ptr, ldu,
 				cutf::type::get_data_type<float>(),
-				Vt_ptr, ldvt,
+				V_ptr, ldv,
 				cutf::type::get_data_type<float>(),
 				&working_memory_device_size,
 				&working_memory_host_size
@@ -39,7 +39,7 @@ void mtk::rsvd_test::rsvd_cusolver::run() {
 					cutf::type::get_data_type<float>(),
 					U_ptr, ldu,
 					cutf::type::get_data_type<float>(),
-					Vt_ptr, ldvt,
+					V_ptr, ldv,
 					cutf::type::get_data_type<float>(),
 					working_memory_device_uptr.get(),
 					working_memory_device_size,
