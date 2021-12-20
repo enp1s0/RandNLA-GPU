@@ -3,8 +3,8 @@
 #include <cutf/memory.hpp>
 #include <cutf/cusolver.hpp>
 
-constexpr unsigned max_log_m = 15;
-constexpr unsigned max_log_n = 15;
+constexpr unsigned max_log_m = 13;
+constexpr unsigned max_log_n = 13;
 constexpr unsigned n_svdj_iter = 10;
 
 namespace {
@@ -21,6 +21,7 @@ void evaluate(
 			rsvd.get_p(),
 			rsvd.get_n_svdj_iter()
 			);
+	std::printf("%u\n", n_tests);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
 	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
@@ -34,11 +35,13 @@ void evaluate(
 	rsvd.set_input_ptr(A_uptr.get());
 	rsvd.set_output_ptr(U_uptr.get(), S_uptr.get(), V_uptr.get());
 
-	rsvd.prepare();
+	try {
+		rsvd.prepare();
+		rsvd.run();
+	} catch (const std::exception& e) {
+		std::printf("%s\n", e.what());
+	}
 
-	rsvd.run();
-
-	std::printf("%u\n", n_tests);
 }
 } // noname namespace
 
@@ -54,7 +57,7 @@ int main() {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
-				const auto p = k / 10;
+				const auto p = k;
 				if (k + p > std::min(m, n)) {
 					break;
 				}
