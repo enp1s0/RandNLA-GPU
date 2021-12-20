@@ -20,9 +20,9 @@ void mtk::rsvd_test::rsvd_cusolver::prepare() {
 				&working_memory_device_size,
 				&working_memory_host_size
 				));
-	working_memory_host_uptr = cutf::memory::get_host_unique_ptr<uint8_t>(working_memory_host_size);
-	working_memory_device_uptr = cutf::memory::get_device_unique_ptr<uint8_t>(working_memory_device_size);
-	devInfo_uptr = cutf::memory::get_device_unique_ptr<int>(1);
+	working_memory_host_ptr = cutf::memory::malloc_host<uint8_t>(working_memory_host_size);
+	working_memory_device_ptr = cutf::memory::malloc_async<uint8_t>(working_memory_device_size, cuda_stream);
+	devInfo_ptr = cutf::memory::malloc_async<int>(1, cuda_stream);
 }
 
 void mtk::rsvd_test::rsvd_cusolver::run() {
@@ -41,10 +41,16 @@ void mtk::rsvd_test::rsvd_cusolver::run() {
 					cutf::type::get_data_type<float>(),
 					V_ptr, ldv,
 					cutf::type::get_data_type<float>(),
-					working_memory_device_uptr.get(),
+					working_memory_device_ptr,
 					working_memory_device_size,
-					working_memory_host_uptr.get(),
+					working_memory_host_ptr,
 					working_memory_host_size,
-					devInfo_uptr.get()
+					devInfo_ptr
 				));
+}
+
+void mtk::rsvd_test::rsvd_cusolver::clean() {
+	cutf::memory::free_async(working_memory_device_ptr, cuda_stream);
+	cutf::memory::free_async(devInfo_ptr, cuda_stream);
+	cutf::memory::free_host(working_memory_host_ptr);
 }

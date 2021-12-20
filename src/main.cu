@@ -2,6 +2,7 @@
 #include <rsvd_test.hpp>
 #include <cutf/memory.hpp>
 #include <cutf/cusolver.hpp>
+#include <cutf/stream.hpp>
 
 constexpr unsigned max_log_m = 13;
 constexpr unsigned max_log_n = 13;
@@ -11,7 +12,8 @@ namespace {
 void evaluate(
 		const std::string test_name,
 		mtk::rsvd_test::rsvd_base& rsvd,
-		const unsigned n_tests
+		const unsigned n_tests,
+		cudaStream_t cuda_stream
 		) {
 	std::printf("%s,%u,%u,%u,%u,%u,",
 			test_name.c_str(),
@@ -27,27 +29,34 @@ void evaluate(
 	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
 	const auto V_size = rsvd.get_n() * (rsvd.get_k() + rsvd.get_p());
 
-	auto A_uptr = cutf::memory::get_device_unique_ptr<float>(A_size);
-	auto U_uptr = cutf::memory::get_device_unique_ptr<float>(U_size);
-	auto S_uptr = cutf::memory::get_device_unique_ptr<float>(S_size);
-	auto V_uptr = cutf::memory::get_device_unique_ptr<float>(V_size);
+	auto A_ptr = cutf::memory::malloc_async<float>(A_size, cuda_stream);
+	auto U_ptr = cutf::memory::malloc_async<float>(U_size, cuda_stream);
+	auto S_ptr = cutf::memory::malloc_async<float>(S_size, cuda_stream);
+	auto V_ptr = cutf::memory::malloc_async<float>(V_size, cuda_stream);
 
-	rsvd.set_input_ptr(A_uptr.get());
-	rsvd.set_output_ptr(U_uptr.get(), S_uptr.get(), V_uptr.get());
+	rsvd.set_input_ptr(A_ptr);
+	rsvd.set_output_ptr(U_ptr, S_ptr, V_ptr);
 
 	try {
 		rsvd.prepare();
 		rsvd.run();
+		rsvd.clean();
 	} catch (const std::exception& e) {
 		std::printf("%s\n", e.what());
 	}
 
+	cutf::memory::free_async<float>(A_ptr, cuda_stream);
+	cutf::memory::free_async<float>(U_ptr, cuda_stream);
+	cutf::memory::free_async<float>(S_ptr, cuda_stream);
+	cutf::memory::free_async<float>(V_ptr, cuda_stream);
 }
 } // noname namespace
 
 int main() {
+	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
 	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
 	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
+	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle.get(), *cuda_stream.get()));
 	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
 
 	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
@@ -69,10 +78,11 @@ int main() {
 						nullptr, m,
 						nullptr, m,
 						nullptr,
-						nullptr, n
+						nullptr, n,
+						*cuda_stream.get()
 						);
 
-				evaluate("cusolver", rsvd_cusolver, 10);
+				evaluate("cusolver", rsvd_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}
