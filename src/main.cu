@@ -14,7 +14,7 @@ void evaluate(
 		const std::string test_name,
 		mtk::rsvd_test::rsvd_base& rsvd,
 		const unsigned n_tests,
-		cudaStream_t cuda_stream
+		cudaStream_t const cuda_stream
 		) {
 	std::printf("%s,%u,%u,%u,%u,%u,",
 			test_name.c_str(),
@@ -24,7 +24,6 @@ void evaluate(
 			rsvd.get_p(),
 			rsvd.get_n_svdj_iter()
 			);
-	std::printf("%u\n", n_tests);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
 	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
@@ -35,27 +34,41 @@ void evaluate(
 	auto S_ptr = cutf::memory::malloc_async<float>(S_size, cuda_stream);
 	auto V_ptr = cutf::memory::malloc_async<float>(V_size, cuda_stream);
 
+	rsvd.set_input_ptr(A_ptr);
+	rsvd.set_output_ptr(U_ptr, S_ptr, V_ptr);
+
 	// Initialize the input matrix
 	const uint64_t seed = 10;
 	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_MT19937);
 	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
-	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), A_ptr, A_size));
+	rsvd.prepare();
 
-	rsvd.set_input_ptr(A_ptr);
-	rsvd.set_output_ptr(U_ptr, S_ptr, V_ptr);
+	auto elapsed_time_sum = 0.;
+	for (unsigned i = 0; i < n_tests; i++) {
+		CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), A_ptr, A_size));
 
-	try {
-		rsvd.prepare();
-		rsvd.run();
-		rsvd.clean();
-	} catch (const std::exception& e) {
-		std::printf("%s\n", e.what());
+		try {
+			cudaStreamSynchronize(cuda_stream);
+			const auto start_clock = std::chrono::system_clock::now();
+			rsvd.run();
+			cudaStreamSynchronize(cuda_stream);
+			const auto end_clock = std::chrono::system_clock::now();
+			const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;
+			elapsed_time_sum += elapsed_time;
+			// Calculate the residual and max relative error
+
+		} catch (const std::exception& e) {
+			std::printf("%s\n", e.what());
+		}
 	}
+	std::printf("%e,", elapsed_time_sum / n_tests);
 
+	rsvd.clean();
 	cutf::memory::free_async<float>(A_ptr, cuda_stream);
 	cutf::memory::free_async<float>(U_ptr, cuda_stream);
 	cutf::memory::free_async<float>(S_ptr, cuda_stream);
 	cutf::memory::free_async<float>(V_ptr, cuda_stream);
+	std::printf("%u\n", n_tests);
 }
 } // noname namespace
 
