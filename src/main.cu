@@ -3,6 +3,7 @@
 #include <cutf/memory.hpp>
 #include <cutf/cusolver.hpp>
 #include <cutf/stream.hpp>
+#include <cutf/curand.hpp>
 
 constexpr unsigned max_log_m = 13;
 constexpr unsigned max_log_n = 13;
@@ -33,6 +34,12 @@ void evaluate(
 	auto U_ptr = cutf::memory::malloc_async<float>(U_size, cuda_stream);
 	auto S_ptr = cutf::memory::malloc_async<float>(S_size, cuda_stream);
 	auto V_ptr = cutf::memory::malloc_async<float>(V_size, cuda_stream);
+
+	// Initialize the input matrix
+	const uint64_t seed = 10;
+	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_MT19937);
+	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
+	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), A_ptr, A_size));
 
 	rsvd.set_input_ptr(A_ptr);
 	rsvd.set_output_ptr(U_ptr, S_ptr, V_ptr);
