@@ -4,3 +4,6 @@
 [submodule "src/mateval"]
 	path = src/mateval
 	url = https://github.com/enp1s0/mateval
+[submodule "src/matfile"]
+	path = src/matfile
+	url = https://github.com/enp1s0/matfile
