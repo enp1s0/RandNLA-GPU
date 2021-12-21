@@ -2,25 +2,28 @@
 #include <chrono>
 #include <vector>
 #include <rsvd_test.hpp>
+#include <input_matrix.hpp>
 #include <cutf/memory.hpp>
 #include <cutf/cusolver.hpp>
 #include <cutf/stream.hpp>
 #include <cutf/curand.hpp>
 #include <mateval/comparison_cuda.hpp>
 
-constexpr unsigned max_log_m = 13;
-constexpr unsigned max_log_n = 13;
+constexpr unsigned max_log_m = 10;
+constexpr unsigned max_log_n = 10;
 constexpr unsigned n_svdj_iter = 10;
 
 namespace {
 void evaluate(
-		const std::string test_name,
+		const std::string implementation_name,
+		const std::string input_matrix_name,
 		mtk::rsvd_test::rsvd_base& rsvd,
 		const unsigned n_tests,
 		cudaStream_t const cuda_stream
 		) {
-	std::printf("%s,%u,%u,%u,%u,%u,",
-			test_name.c_str(),
+	std::printf("%s,%s,%u,%u,%u,%u,%u,",
+			implementation_name.c_str(),
+			input_matrix_name.c_str(),
 			rsvd.get_m(),
 			rsvd.get_n(),
 			rsvd.get_k(),
@@ -40,10 +43,7 @@ void evaluate(
 	rsvd.set_input_ptr(A_ptr);
 	rsvd.set_output_ptr(U_ptr, S_ptr, V_ptr);
 
-	// Initialize the input matrix
-	const uint64_t seed = 10;
-	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_MT19937);
-	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
+	auto hA_ptr = cutf::memory::malloc_host<float>(A_size);
 	rsvd.prepare();
 
 	auto elapsed_time_sum = 0.;
@@ -51,7 +51,15 @@ void evaluate(
 	std::vector<double> u_orthogonality_list(n_tests);
 	std::vector<double> v_orthogonality_list(n_tests);
 	for (unsigned i = 0; i < n_tests; i++) {
-		CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), A_ptr, A_size));
+		// Initialize input matrix
+		CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+		mtk::rsvd_test::get_input_matrix(
+				hA_ptr, input_matrix_name,
+				rsvd.get_m(), rsvd.get_n(),
+				i
+				);
+		cutf::memory::copy_async(A_ptr, hA_ptr, A_size, cuda_stream);
+		CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 
 		try {
 			cudaStreamSynchronize(cuda_stream);
@@ -81,6 +89,7 @@ void evaluate(
 					mtk::mateval::col_major,
 					V_ptr, rsvd.get_n()
 					);
+			CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 
 		} catch (const std::exception& e) {
 			std::printf("%s\n", e.what());
@@ -98,6 +107,7 @@ void evaluate(
 	cutf::memory::free_async<float>(U_ptr, cuda_stream);
 	cutf::memory::free_async<float>(S_ptr, cuda_stream);
 	cutf::memory::free_async<float>(V_ptr, cuda_stream);
+	cutf::memory::free_host<float>(hA_ptr);
 	std::printf("%u\n", n_tests);
 }
 } // noname namespace
@@ -132,7 +142,7 @@ int main() {
 						*cuda_stream.get()
 						);
 
-				evaluate("cusolver", rsvd_cusolver, 10, *cuda_stream.get());
+				evaluate("cusolver", "latms", rsvd_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}
