@@ -1,9 +1,12 @@
 #include <iostream>
+#include <chrono>
+#include <vector>
 #include <rsvd_test.hpp>
 #include <cutf/memory.hpp>
 #include <cutf/cusolver.hpp>
 #include <cutf/stream.hpp>
 #include <cutf/curand.hpp>
+#include <mateval/comparison_cuda.hpp>
 
 constexpr unsigned max_log_m = 13;
 constexpr unsigned max_log_n = 13;
@@ -44,6 +47,9 @@ void evaluate(
 	rsvd.prepare();
 
 	auto elapsed_time_sum = 0.;
+	std::vector<double> residual_list(n_tests);
+	std::vector<double> u_orthogonality_list(n_tests);
+	std::vector<double> v_orthogonality_list(n_tests);
 	for (unsigned i = 0; i < n_tests; i++) {
 		CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), A_ptr, A_size));
 
@@ -55,12 +61,36 @@ void evaluate(
 			const auto end_clock = std::chrono::system_clock::now();
 			const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;
 			elapsed_time_sum += elapsed_time;
-			// Calculate the residual and max relative error
+			// Calculate the residual and orthogonality
+
+			residual_list[i] = mtk::mateval::cuda::residual_UxSxVt(
+					rsvd.get_m(), rsvd.get_n(), rsvd.get_k(),
+					mtk::mateval::col_major, mtk::mateval::col_major, mtk::mateval::col_major,
+					U_ptr, rsvd.get_m(),
+					S_ptr,
+					V_ptr, rsvd.get_n(),
+					A_ptr, rsvd.get_m()
+					);
+			u_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
+					rsvd.get_m(), rsvd.get_k(),
+					mtk::mateval::col_major,
+					U_ptr, rsvd.get_m()
+					);
+			v_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
+					rsvd.get_n(), rsvd.get_k(),
+					mtk::mateval::col_major,
+					V_ptr, rsvd.get_n()
+					);
 
 		} catch (const std::exception& e) {
 			std::printf("%s\n", e.what());
 		}
 	}
+	std::printf("%e,%e,%e,",
+			mtk::mateval::utils::calc_mean_and_var(residual_list).first,
+			mtk::mateval::utils::calc_mean_and_var(u_orthogonality_list).first,
+			mtk::mateval::utils::calc_mean_and_var(v_orthogonality_list).first
+			);
 	std::printf("%e,", elapsed_time_sum / n_tests);
 
 	rsvd.clean();
