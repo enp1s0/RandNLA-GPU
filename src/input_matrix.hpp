@@ -4,9 +4,8 @@
 
 namespace mtk {
 namespace rsvd_test {
-template <class T>
 void get_input_matrix(
-		T* const ptr,
+		float* const ptr,
 		const std::string input_matrix_name,
 		const std::size_t m,
 		const std::size_t n,
