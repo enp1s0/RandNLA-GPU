@@ -1,5 +1,6 @@
 CXX=g++
 CXXFLAGS=-std=c++14 -I./src/cutf/include -O3 -I./src
+CXXFLAGS+= -I./src/mateval/include -L./src/mateval/build/ -lmateval_cuda
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
