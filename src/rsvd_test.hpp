@@ -2,6 +2,7 @@
 #define __RSVD_TEST_HPP__
 #include <cstdint>
 #include <cutf/cusolver.hpp>
+#include <cutf/cublas.hpp>
 #include <cutf/memory.hpp>
 
 namespace mtk {
@@ -111,6 +112,41 @@ public:
 		cusolver_handle(cusolver_handle),
 		cusolver_params(cusolver_params),
 		rsvd_base("cusolver_svdr", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+
+	void prepare();
+	void run();
+	void clean();
+};
+
+class rsvd_selfmade : public rsvd_base {
+	cusolverDnHandle_t cusolver_handle;
+	cusolverDnParams_t cusolver_params;
+	cublasHandle_t cublas_handle;
+
+	// working memory size
+	std::size_t working_memory_device_size;
+
+	// working memory
+	uint8_t* working_memory_device_ptr;
+	int* devInfo_ptr;
+public:
+	rsvd_selfmade(
+		cublasHandle_t cublas_handle,
+		cusolverDnHandle_t cusolver_handle,
+		cusolverDnParams_t cusolver_params,
+		const unsigned m, const unsigned n,
+		const unsigned k, const unsigned p,
+		const unsigned n_svdj_iter,
+		float* const A_ptr, const unsigned lda,
+		float* const U_ptr, const unsigned ldu,
+		float* const S_ptr,
+		float* const V_ptr, const unsigned ldv,
+		cudaStream_t const cuda_stream
+		):
+		cublas_handle(cublas_handle),
+		cusolver_handle(cusolver_handle),
+		cusolver_params(cusolver_params),
+		rsvd_base("selfmade", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();
