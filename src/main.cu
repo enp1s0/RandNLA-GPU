@@ -142,7 +142,7 @@ int main() {
 						*cuda_stream.get()
 						);
 
-				evaluate("cusolver", "latms", rsvd_cusolver, 10, *cuda_stream.get());
+				evaluate("cusolver", "latms-" + std::to_string(k), rsvd_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}
