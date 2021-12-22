@@ -7,9 +7,10 @@ void mtk::rsvd_test::gen_latms_matrix(
 		const std::size_t ld,
 		const std::size_t m,
 		const std::size_t n,
-		const std::size_t rank
+		const std::size_t rank,
+		const std::uint64_t seed
 		) {
-	int iseed[4] = {0, 1, 2, 3};
+	int iseed[4] = {0, 1, 2, static_cast<int>(seed)};
 
 	const auto s_vec_len = std::min(m, n);
 	std::vector<float> s_vec(s_vec_len);

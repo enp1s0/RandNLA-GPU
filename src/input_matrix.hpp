@@ -18,7 +18,8 @@ void gen_latms_matrix(
 		const std::size_t ld,
 		const std::size_t m,
 		const std::size_t n,
-		const std::size_t rank
+		const std::size_t rank,
+		const std::uint64_t seed
 		);
 } // namespace rsvd_test
 } // namespace mtk
