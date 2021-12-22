@@ -18,14 +18,13 @@ void print_csv_header() {
 	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,throughput,n_tests\n");
 }
 void evaluate(
-		const std::string implementation_name,
 		const std::string input_matrix_name,
 		mtk::rsvd_test::rsvd_base& rsvd,
 		const unsigned n_tests,
 		cudaStream_t const cuda_stream
 		) {
 	std::printf("%s,%s,%u,%u,%u,%u,%u,",
-			implementation_name.c_str(),
+			rsvd.get_name().c_str(),
 			input_matrix_name.c_str(),
 			rsvd.get_m(),
 			rsvd.get_n(),
@@ -146,7 +145,7 @@ int main() {
 						*cuda_stream.get()
 						);
 
-				evaluate("cusolver", "latms-" + std::to_string(k), rsvd_cusolver, 10, *cuda_stream.get());
+				evaluate("latms-" + std::to_string(k), rsvd_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}

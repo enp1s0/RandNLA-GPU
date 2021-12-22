@@ -8,6 +8,8 @@ namespace mtk {
 namespace rsvd_test {
 class rsvd_base {
 protected:
+	const std::string name;
+
 	const unsigned m;
 	const unsigned n;
 
@@ -30,6 +32,7 @@ protected:
 	cudaStream_t cuda_stream;
 protected:
 	rsvd_base(
+			const std::string name,
 		const unsigned m, const unsigned n,
 		const unsigned k, const unsigned p,
 		const unsigned n_svdj_iter,
@@ -39,6 +42,7 @@ protected:
 		float* const V_ptr, const unsigned ldv,
 		cudaStream_t const cuda_stream
 		):
+		name(name),
 		m(m), n(n),
 		k(k), p(p),
 		n_svdj_iter(n_svdj_iter),
@@ -58,6 +62,10 @@ public:
 	unsigned get_k() const {return k;}
 	unsigned get_p() const {return p;}
 	unsigned get_n_svdj_iter() const {return n_svdj_iter;}
+
+	std::string get_name() const {
+		return name;
+	}
 
 	void set_input_ptr(
 			float* const A
@@ -102,7 +110,7 @@ public:
 		):
 		cusolver_handle(cusolver_handle),
 		cusolver_params(cusolver_params),
-		rsvd_base(m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+		rsvd_base("cusolver_svdr", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();
