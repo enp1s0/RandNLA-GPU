@@ -11,6 +11,16 @@ void get_input_matrix(
 		const std::size_t n,
 		const std::uint64_t seed
 		);
+
+// matgen
+void gen_latms_matrix(
+		float* const ptr,
+		const std::size_t ld,
+		const std::size_t m,
+		const std::size_t n,
+		const std::size_t rank,
+		const std::uint64_t seed
+		);
 } // namespace rsvd_test
 } // namespace mtk
 #endif
