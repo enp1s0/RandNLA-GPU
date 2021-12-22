@@ -14,6 +14,9 @@ constexpr unsigned max_log_n = 10;
 constexpr unsigned n_svdj_iter = 10;
 
 namespace {
+void print_csv_header() {
+	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,throughput,n_tests\n");
+}
 void evaluate(
 		const std::string implementation_name,
 		const std::string input_matrix_name,
@@ -119,6 +122,7 @@ int main() {
 	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle.get(), *cuda_stream.get()));
 	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
 
+	print_csv_header();
 	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
 		for (unsigned log_n = 5; log_n <= max_log_n; log_n++) {
 			const auto max_log_k = std::min(log_m, log_n);
