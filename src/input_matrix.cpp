@@ -21,4 +21,31 @@ void mtk::rsvd_test::get_input_matrix(
 	}
 
 	// When matrix file does not exist, generate it
+	std::string matrix_name_base = "";
+	if (input_matrix_name.find_first_of("-", 0) != std::string::npos) {
+		matrix_name_base = input_matrix_name.substr(0, input_matrix_name.find_first_of("-", 0));
+	} else {
+		matrix_name_base = input_matrix_name;
+	}
+
+	bool generated = false;
+	if (matrix_name_base == "latms") {
+		const auto rank_str = input_matrix_name.substr(input_matrix_name.find_first_of("-", 0) + 1);
+		const auto rank = std::stoul(rank_str);
+
+		mtk::rsvd_test::gen_latms_matrix(
+			ptr, m,
+			m, n,
+			rank
+			);
+		generated = true;
+	}
+
+	if (generated) {
+		mtk::matfile::save_dense(
+			m, n,
+			ptr, m,
+			file_path
+			);
+	}
 }
