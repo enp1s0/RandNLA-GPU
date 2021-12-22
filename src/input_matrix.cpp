@@ -17,7 +17,7 @@ void mtk::rsvd_test::get_input_matrix(
 			);
 		return;
 	} catch(const std::exception &e) {
-		std::printf("%s (cought @%s(%u))\n", e.what(), __FILE__, __LINE__);
+		std::fprintf(stderr, "%s (cought @%s(%u))\n", e.what(), __FILE__, __LINE__);
 	}
 
 	// When matrix file does not exist, generate it
