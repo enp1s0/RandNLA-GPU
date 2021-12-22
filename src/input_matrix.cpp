@@ -36,7 +36,8 @@ void mtk::rsvd_test::get_input_matrix(
 		mtk::rsvd_test::gen_latms_matrix(
 			ptr, m,
 			m, n,
-			rank
+			rank,
+			seed
 			);
 		generated = true;
 	}
