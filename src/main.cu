@@ -35,8 +35,8 @@ void evaluate(
 			);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
-	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
-	const auto V_size = rsvd.get_n() * (rsvd.get_k() + rsvd.get_p());
+	const auto U_size = rsvd.get_m() * rsvd.get_k();
+	const auto V_size = rsvd.get_n() * rsvd.get_k();
 
 	auto A_ptr = cutf::memory::malloc_async<float>(A_size, cuda_stream);
 	auto U_ptr = cutf::memory::malloc_async<float>(U_size, cuda_stream);
