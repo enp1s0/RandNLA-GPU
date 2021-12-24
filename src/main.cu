@@ -15,7 +15,7 @@ constexpr unsigned n_svdj_iter = 10;
 
 namespace {
 void print_csv_header() {
-	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,throughput,n_tests\n");
+	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
 }
 void evaluate(
 		const std::string implementation_name,
