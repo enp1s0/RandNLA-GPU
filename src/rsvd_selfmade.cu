@@ -15,8 +15,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf_buffer_size(
 				cusolver_handle,
 				get_m(), q,
-				working_memory.alloc_ptr,
-				get_m(),
+				working_memory.alloc_ptr, get_m(),
 				&tmp_work_size
 				));
 	working_memory.geqrf_0_size = tmp_work_size;
@@ -24,8 +23,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 
 	CUTF_CHECK_ERROR(cusolverDnSorgqr_bufferSize(
 				cusolver_handle,
-				get_m(),
-				q,
+				get_m(), q,
 				q,
 				working_memory.y_matrix_ptr, get_m(),
 				working_memory.tau_ptr,
@@ -34,19 +32,19 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.orgqr_0_size = tmp_work_size;
 
 	// MATMUL (B)
-	working_memory.b_matrix_size = q * get_n();
+	working_memory.b_matrix_size = get_n() * q;
 
 	// SVDJ
 	constexpr double tol = 1e-7;
 	CUTF_CHECK_ERROR(cusolverDnCreateGesvdjInfo(&svdj_params));
-	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, n_svdj_iter));
+	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, get_n_svdj_iter()));
 	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetTolerance(svdj_params, tol));
 	CUTF_CHECK_ERROR(cusolverDnSgesvdj_bufferSize(
 				cusolver_handle,
 				CUSOLVER_EIG_MODE_VECTOR,
 				1,
-				q, get_n(),
-				working_memory.b_matrix_ptr, n,
+				get_n(), q,
+				working_memory.b_matrix_ptr, get_n(),
 				S_ptr,
 				V_ptr, ldv,
 				working_memory.small_u_ptr, q,
@@ -92,7 +90,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_N, CUBLAS_OP_N,
-				get_m(), get_p() + get_k(), get_n(),
+				get_m(), q, get_n(),
 				&alpha,
 				A_ptr, get_m(),
 				working_memory.rand_mat_ptr, get_n(),
@@ -103,7 +101,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	// QR(1)
 	CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 				cusolver_handle,
-				get_m(), get_k() + get_p(),
+				get_m(), q,
 				working_memory.y_matrix_ptr, get_m(),
 				working_memory.tau_ptr,
 				working_memory.geqrf_0_ptr,
@@ -112,8 +110,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				));
 	CUTF_CHECK_ERROR(cusolverDnSorgqr(
 				cusolver_handle,
-				get_m(),
-				q,
+				get_m(), q,
 				q,
 				working_memory.y_matrix_ptr, get_m(),
 				working_memory.tau_ptr,
