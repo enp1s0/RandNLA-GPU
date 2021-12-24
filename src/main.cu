@@ -147,6 +147,18 @@ int main() {
 						);
 
 				evaluate("cusolver", "latms-" + std::to_string(k), rsvd_cusolver, 10, *cuda_stream.get());
+
+				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
+						*cusolver_handle.get(),
+						m, n, k, p, n_svdj_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get()
+						);
+
+				evaluate("svdj", "latms-" + std::to_string(k), svdj_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}
