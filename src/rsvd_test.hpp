@@ -108,6 +108,41 @@ public:
 	void run();
 	void clean();
 };
+
+
+class svdj_cusolver : public rsvd_base {
+	cusolverDnHandle_t cusolver_handle;
+	gesvdjInfo_t svdj_params;
+
+	// working memory size
+	std::size_t working_memory_device_size;
+
+	float* full_U_ptr;
+	float* full_S_ptr;
+	float* full_V_ptr;
+
+	// working memory
+	float* working_memory_device_ptr;
+	int* devInfo_ptr;
+public:
+	svdj_cusolver(
+		cusolverDnHandle_t cusolver_handle,
+		const unsigned m, const unsigned n,
+		const unsigned k, const unsigned p,
+		const unsigned n_svdj_iter,
+		float* const A_ptr, const unsigned lda,
+		float* const U_ptr, const unsigned ldu,
+		float* const S_ptr,
+		float* const V_ptr, const unsigned ldv,
+		cudaStream_t const cuda_stream
+		):
+		cusolver_handle(cusolver_handle),
+		rsvd_base(m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+
+	void prepare();
+	void run();
+	void clean();
+};
 }
 } // namespace mtk
 #endif
