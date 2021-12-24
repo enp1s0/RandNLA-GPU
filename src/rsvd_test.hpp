@@ -120,15 +120,30 @@ public:
 
 class rsvd_selfmade : public rsvd_base {
 	cusolverDnHandle_t cusolver_handle;
-	cusolverDnParams_t cusolver_params;
+	gesvdjInfo_t svdj_params;
 	cublasHandle_t cublas_handle;
 
 	// working memory size
-	std::size_t working_memory_device_size;
-
-	// working memory
-	uint8_t* working_memory_device_ptr;
-	int* devInfo_ptr;
+	struct {
+		float* alloc_ptr;
+		std::size_t geqrf_0_size;
+		float* geqrf_0_ptr;
+		std::size_t orgqr_0_size;
+		float* orgqr_0_ptr;
+		std::size_t tau_size;
+		float* tau_ptr;
+		std::size_t gesvdj_size;
+		float* gesvdj_ptr;
+		std::size_t rand_matrix_size;
+		float* rand_mat_ptr;
+		std::size_t y_matrix_size;
+		float* y_matrix_ptr;
+		std::size_t b_matrix_size;
+		float* b_matrix_ptr;
+		std::size_t small_u_size;
+		float* small_u_ptr;
+		int* devInfo_ptr;
+	} working_memory;
 public:
 	rsvd_selfmade(
 		cublasHandle_t cublas_handle,
@@ -145,7 +160,6 @@ public:
 		):
 		cublas_handle(cublas_handle),
 		cusolver_handle(cusolver_handle),
-		cusolver_params(cusolver_params),
 		rsvd_base("selfmade", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
