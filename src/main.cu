@@ -11,11 +11,11 @@
 
 constexpr unsigned max_log_m = 10;
 constexpr unsigned max_log_n = 10;
-constexpr unsigned n_svdj_iter = 10;
+constexpr unsigned n_svdj_iter = 100;
 
 namespace {
 void print_csv_header() {
-	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,throughput,n_tests\n");
+	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
 }
 void evaluate(
 		const std::string input_matrix_name,
@@ -34,8 +34,8 @@ void evaluate(
 			);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
-	const auto U_size = rsvd.get_m() * (rsvd.get_k() + rsvd.get_p());
-	const auto V_size = rsvd.get_n() * (rsvd.get_k() + rsvd.get_p());
+	const auto U_size = rsvd.get_m() * rsvd.get_k();
+	const auto V_size = rsvd.get_n() * rsvd.get_k();
 
 	auto A_ptr = cutf::memory::malloc_async<float>(A_size, cuda_stream);
 	auto U_ptr = cutf::memory::malloc_async<float>(U_size, cuda_stream);
@@ -79,7 +79,7 @@ void evaluate(
 					U_ptr, rsvd.get_m(),
 					S_ptr,
 					V_ptr, rsvd.get_n(),
-					A_ptr, rsvd.get_m()
+					hA_ptr, rsvd.get_m()
 					);
 			u_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
 					rsvd.get_m(), rsvd.get_k(),
@@ -148,7 +148,6 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-
 				evaluate(matrix_name, rsvd_cusolver, 10, *cuda_stream.get());
 
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
@@ -162,8 +161,18 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-
 				evaluate(matrix_name, rsvd_selfmade, 10, *cuda_stream.get());
+
+				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
+						*cusolver_handle.get(),
+						m, n, k, p, n_svdj_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get()
+						);
+				evaluate(matrix_name, svdj_cusolver, 10, *cuda_stream.get());
 			}
 		}
 	}
