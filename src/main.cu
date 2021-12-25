@@ -80,7 +80,7 @@ void evaluate(
 					U_ptr, rsvd.get_m(),
 					S_ptr,
 					V_ptr, rsvd.get_n(),
-					A_ptr, rsvd.get_m()
+					hA_ptr, rsvd.get_m()
 					);
 			u_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
 					rsvd.get_m(), rsvd.get_k(),
