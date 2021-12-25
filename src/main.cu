@@ -11,7 +11,7 @@
 
 constexpr unsigned max_log_m = 10;
 constexpr unsigned max_log_n = 10;
-constexpr unsigned n_svdj_iter = 10;
+constexpr unsigned n_svdj_iter = 100;
 
 namespace {
 void print_csv_header() {
