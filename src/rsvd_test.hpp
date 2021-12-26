@@ -142,6 +142,10 @@ class rsvd_selfmade : public rsvd_base {
 		float* b_matrix_ptr;
 		std::size_t small_u_size;
 		float* small_u_ptr;
+		std::size_t full_V_size;
+		float* full_V_ptr;
+		std::size_t full_S_size;
+		float* full_S_ptr;
 		int* devInfo_ptr;
 	} working_memory;
 public:
@@ -195,7 +199,7 @@ public:
 		cudaStream_t const cuda_stream
 		):
 		cusolver_handle(cusolver_handle),
-		rsvd_base(m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+		rsvd_base("svdj", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();
