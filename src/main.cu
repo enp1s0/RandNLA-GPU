@@ -11,6 +11,7 @@
 
 constexpr unsigned max_log_m = 10;
 constexpr unsigned max_log_n = 10;
+constexpr unsigned n_tests = 10;
 constexpr unsigned n_svdj_iter = 100;
 
 namespace {
@@ -148,7 +149,7 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-				evaluate(matrix_name, rsvd_cusolver, 10, *cuda_stream.get());
+				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
 						*cublas_handle.get(),
@@ -161,7 +162,7 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-				evaluate(matrix_name, rsvd_selfmade, 10, *cuda_stream.get());
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
@@ -172,7 +173,7 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-				evaluate(matrix_name, svdj_cusolver, 10, *cuda_stream.get());
+				evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
 			}
 		}
 	}
