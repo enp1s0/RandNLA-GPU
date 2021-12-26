@@ -48,8 +48,8 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 				get_n(), q,
 				working_memory.b_matrix_ptr, get_n(),
 				S_ptr,
-				V_ptr, ldv,
 				working_memory.small_u_ptr, q,
+				working_memory.full_V_ptr, get_n(),
 				&tmp_work_size,
 				svdj_params
 				));
@@ -60,7 +60,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 
 	// Memory allocation
 	const std::size_t cusolver_working_memory_size = std::max(std::max(working_memory.geqrf_0_size, working_memory.orgqr_0_size), working_memory.gesvdj_size);
-	const std::size_t tmp_matrix_size = working_memory.rand_matrix_size + working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size;
+	const std::size_t tmp_matrix_size = working_memory.rand_matrix_size + working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size + working_memory.small_u_size;
 
 	// Allocate
 	working_memory.alloc_ptr = cutf::memory::malloc_async<float>(cusolver_working_memory_size + tmp_matrix_size, cuda_stream);
@@ -72,8 +72,8 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.tau_ptr = working_memory.b_matrix_ptr + working_memory.b_matrix_size;
 	working_memory.full_V_ptr = working_memory.tau_ptr + working_memory.tau_size;
 	working_memory.full_S_ptr = working_memory.tau_ptr;
-	working_memory.small_u_ptr = working_memory.y_matrix_ptr;
-	working_memory.geqrf_0_ptr = working_memory.full_V_ptr + working_memory.full_V_size;
+	working_memory.small_u_ptr = working_memory.full_V_ptr + working_memory.full_V_size;
+	working_memory.geqrf_0_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
 	working_memory.gesvdj_ptr = working_memory.geqrf_0_ptr;
 	working_memory.orgqr_0_ptr = working_memory.geqrf_0_ptr;
 
@@ -129,12 +129,12 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_T, CUBLAS_OP_N,
-				get_n(), q, get_m(),
+				q, get_n(), get_m(),
 				&alpha,
-				A_ptr, get_m(),
 				working_memory.y_matrix_ptr, get_m(),
+				A_ptr, get_m(),
 				&beta,
-				working_memory.b_matrix_ptr, get_n()
+				working_memory.b_matrix_ptr, q
 				));
 
 	// SVD
@@ -142,11 +142,11 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				cusolver_handle,
 				CUSOLVER_EIG_MODE_VECTOR,
 				1,
-				get_n(), q,
-				working_memory.b_matrix_ptr, get_n(),
+				q, get_n(),
+				working_memory.b_matrix_ptr, q,
 				working_memory.full_S_ptr,
-				working_memory.full_V_ptr, get_n(),
 				working_memory.small_u_ptr, q,
+				working_memory.full_V_ptr, get_n(),
 				working_memory.gesvdj_ptr,
 				working_memory.gesvdj_size,
 				working_memory.devInfo_ptr,
@@ -155,7 +155,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_N, CUBLAS_OP_N,
-				get_m(), q, q,
+				get_m(), k, q,
 				&alpha,
 				working_memory.y_matrix_ptr, get_m(),
 				working_memory.small_u_ptr, q,
