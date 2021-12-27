@@ -11,6 +11,7 @@
 
 constexpr unsigned max_log_m = 10;
 constexpr unsigned max_log_n = 10;
+constexpr unsigned n_tests = 10;
 constexpr unsigned n_svdj_iter = 100;
 
 namespace {
@@ -18,14 +19,13 @@ void print_csv_header() {
 	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
 }
 void evaluate(
-		const std::string implementation_name,
 		const std::string input_matrix_name,
 		mtk::rsvd_test::rsvd_base& rsvd,
 		const unsigned n_tests,
 		cudaStream_t const cuda_stream
 		) {
 	std::printf("%s,%s,%u,%u,%u,%u,%u,",
-			implementation_name.c_str(),
+			rsvd.get_name().c_str(),
 			input_matrix_name.c_str(),
 			rsvd.get_m(),
 			rsvd.get_n(),
@@ -119,8 +119,10 @@ int main() {
 	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
 	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
 	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
+	auto cublas_handle = cutf::cublas::get_cublas_unique_ptr();
 	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle.get(), *cuda_stream.get()));
 	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
+	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle.get(), *cuda_stream.get()));
 
 	print_csv_header();
 	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
@@ -130,10 +132,12 @@ int main() {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
-				const auto p = k;
+				const auto p = k / 10;
 				if (k + p > std::min(m, n)) {
 					break;
 				}
+
+				const std::string matrix_name = "latms-" + std::to_string(k);
 
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
@@ -145,8 +149,20 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
+				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 
-				evaluate("cusolver", "latms-" + std::to_string(k), rsvd_cusolver, 10, *cuda_stream.get());
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, k, p, n_svdj_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get()
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
@@ -157,8 +173,7 @@ int main() {
 						nullptr, n,
 						*cuda_stream.get()
 						);
-
-				evaluate("svdj", "latms-" + std::to_string(k), svdj_cusolver, 10, *cuda_stream.get());
+				evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
 			}
 		}
 	}
