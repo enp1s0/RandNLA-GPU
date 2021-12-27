@@ -92,7 +92,12 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
 
+#ifdef TIME_BREAKDOWN
+#endif
 	const float alpha = 1.f, beta = 0.f;
+#ifdef TIME_BREAKDOWN
+	profiler.start_timer_sync("matmul_1");
+#endif
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_N, CUBLAS_OP_N,
@@ -103,7 +108,10 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				&beta,
 				working_memory.y_matrix_ptr, get_m()
 				));
-
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("matmul_1");
+	profiler.start_timer_sync("qr");
+#endif
 	// QR(1)
 	CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 				cusolver_handle,
@@ -126,6 +134,10 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				));
 
 	// MATMUL(2)
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("qr");
+	profiler.start_timer_sync("matmul_2");
+#endif
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_T, CUBLAS_OP_N,
@@ -138,6 +150,10 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				));
 
 	// SVD
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("matmul_2");
+	profiler.start_timer_sync("svd");
+#endif
 	CUTF_CHECK_ERROR(cusolverDnSgesvdj(
 				cusolver_handle,
 				CUSOLVER_EIG_MODE_VECTOR,
@@ -152,6 +168,10 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				working_memory.devInfo_ptr,
 				svdj_params
 				));
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("svd");
+	profiler.start_timer_sync("matmul_3");
+#endif
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_N, CUBLAS_OP_N,
@@ -162,6 +182,10 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				&beta,
 				U_ptr, ldu
 				));
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("matmul_3");
+	profiler.start_timer_sync("matmul_copy");
+#endif
 	mtk::rsvd_test::copy_matrix(
 			get_n(), get_k(),
 			V_ptr, ldv,
@@ -174,6 +198,9 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 			working_memory.full_S_ptr, q,
 			cuda_stream
 			);
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("matmul_copy");
+#endif
 }
 
 void mtk::rsvd_test::rsvd_selfmade::clean() {
