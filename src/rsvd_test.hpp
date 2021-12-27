@@ -4,6 +4,7 @@
 #include <cutf/cusolver.hpp>
 #include <cutf/cublas.hpp>
 #include <cutf/memory.hpp>
+#include <cutf/debug/time_breakdown.hpp>
 
 namespace mtk {
 namespace rsvd_test {
@@ -31,6 +32,8 @@ protected:
 	const unsigned n_svdj_iter;
 
 	cudaStream_t cuda_stream;
+
+	cutf::debug::time_breakdown::profiler profiler;
 protected:
 	rsvd_base(
 			const std::string name,
@@ -51,7 +54,8 @@ protected:
 		U_ptr(U_ptr), ldu(ldu),
 		S_ptr(S_ptr),
 		V_ptr(V_ptr), ldv(ldv),
-		cuda_stream(cuda_stream)	{}
+		cuda_stream(cuda_stream),
+		profiler(cuda_stream)	{}
 
 public:
 	virtual void prepare() = 0;
@@ -81,6 +85,14 @@ public:
 		U_ptr = U;
 		S_ptr = S;
 		V_ptr = V;
+	}
+
+	void print_time_breakdown(const bool csv = false) const {
+		if (csv) {
+			profiler.print_result_csv();
+		} else {
+			profiler.print_result();
+		}
 	}
 };
 
