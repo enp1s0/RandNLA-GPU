@@ -92,7 +92,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
 
-	float alpha = 1.f, beta = 0.f;
+	const float alpha = 1.f, beta = 0.f;
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
 				cublas_handle,
 				CUBLAS_OP_N, CUBLAS_OP_N,
