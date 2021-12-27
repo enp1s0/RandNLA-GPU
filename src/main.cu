@@ -132,7 +132,7 @@ int main() {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
-				const auto p = k;
+				const auto p = k / 10;
 				if (k + p > std::min(m, n)) {
 					break;
 				}
