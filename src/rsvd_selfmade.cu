@@ -45,7 +45,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 				cusolver_handle,
 				CUSOLVER_EIG_MODE_VECTOR,
 				1,
-				get_n(), q,
+				q, get_n(),
 				working_memory.b_matrix_ptr, get_n(),
 				S_ptr,
 				working_memory.small_u_ptr, q,
