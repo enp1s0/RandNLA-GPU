@@ -73,4 +73,5 @@ void mtk::rsvd_test::svdj_cusolver::clean() {
 	cutf::memory::free_async(full_S_ptr, cuda_stream);
 	cutf::memory::free_async(full_U_ptr, cuda_stream);
 	cutf::memory::free_async(full_V_ptr, cuda_stream);
+	cutf::memory::free_async(working_memory_device_ptr, cuda_stream);
 }
