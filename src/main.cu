@@ -12,7 +12,7 @@
 constexpr unsigned max_log_m = 10;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
-constexpr unsigned n_svdj_iter = 100;
+constexpr unsigned n_svdj_iter = 20;
 
 namespace {
 void print_csv_header() {
@@ -163,6 +163,9 @@ int main() {
 						*cuda_stream.get()
 						);
 				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+#ifdef TIME_BREAKDOWN
+				rsvd_selfmade.print_time_breakdown();
+#endif
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),

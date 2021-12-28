@@ -3,6 +3,7 @@ CXXFLAGS=-std=c++14 -I./src/cutf/include -O3 -I./src
 CXXFLAGS+=-I./src/mateval/include -L./src/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I./src/matfile/include
 CXXFLAGS+=-ltmglib -llapacke -llapack -lblas -lgfortran
+#CXXFLAGS+=-DTIME_BREAKDOWN
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
