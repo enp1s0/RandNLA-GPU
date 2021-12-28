@@ -1,6 +1,6 @@
 # Mixed-precision Randomized SVD
 
-## time braekdown
+## time breakdown
 
 Uncomment this line in Makefile
 ```make
