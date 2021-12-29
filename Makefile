@@ -4,6 +4,7 @@ CXXFLAGS+=-I./src/mateval/include -L./src/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I./src/matfile/include
 CXXFLAGS+=-ltmglib -llapacke -llapack -lblas -lgfortran
 #CXXFLAGS+=-DTIME_BREAKDOWN
+#CXXFLAGS+=-DCUTF_DISABLE_MALLOC_ASYNC
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
