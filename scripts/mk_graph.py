@@ -32,7 +32,7 @@ df = pd.read_csv("data.csv", encoding="UTF-8")
 df = df.query('m==n')
 
 # Create graph
-fig, axs = plt.subplots(len(rank_div_list), 3, figsize=(16, n_row * 3))
+fig, axs = plt.subplots(len(rank_div_list), 4, figsize=(16, n_row * 3))
 
 n_line_added = 0
 line_list = []
@@ -41,11 +41,14 @@ for rank_div_index, rank_div in enumerate(rank_div_list):
     axs[rank_div_index][0].set_title('res(rank=n/' + str(rank_div) + ')')
     axs[rank_div_index][1].set_title('ort-U(rank=n/' + str(rank_div) + ')')
     axs[rank_div_index][2].set_title('ort-V(rank=n/' + str(rank_div) + ')')
+    axs[rank_div_index][3].set_title('time[s](rank=n/' + str(rank_div) + ')')
 
-    for index, value in enumerate(['residual', 'u_orthogonality', 'v_orthogonality']):
+    for index, value in enumerate(['residual', 'u_orthogonality', 'v_orthogonality', 'time']):
         axs[rank_div_index][index].set_xscale("log", base=2)
         axs[rank_div_index][index].set_yscale("log", base=10)
         axs[rank_div_index][index].set_ylim((1e-7, 1e-2))
+        if value == 'time':
+            axs[rank_div_index][index].set_ylim((1e-3, 1e+2))
         axs[rank_div_index][index].grid()
         for imp in imp_list:
             x_list = []
