@@ -114,7 +114,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	// generate random matrix
 	const uint64_t seed = 10;
 	const float alpha = 1.f, beta = 0.f;
-	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_MT19937);
+	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_DEFAULT);
 	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
 	CUTF_CHECK_ERROR(curandSetStream(*cugen.get(), cuda_stream));
 
