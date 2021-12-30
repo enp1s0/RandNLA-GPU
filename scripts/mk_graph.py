@@ -65,7 +65,7 @@ for rank_div_index, rank_div in enumerate(rank_div_list):
                     markersize=4,
                     marker="*",
                     color=color_table[imp])
-            if n_line_added < 3:
+            if n_line_added < len(imp_list):
                 line_list += [l]
                 label_list += [implementation_name_table[imp]]
                 n_line_added += 1
