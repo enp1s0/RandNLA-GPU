@@ -2,6 +2,31 @@
 #include <cutf/type.hpp>
 #include <cutf/curand.hpp>
 
+namespace {
+__global__ void fp16_emulation_kernel(
+		float* const ptr,
+		const std::size_t size
+		) {
+	const auto tid = blockDim.x * blockIdx.x + threadIdx.x;
+	if (tid >= size) {
+		return;
+	}
+
+	ptr[tid] = cutf::type::cast<float>(cutf::type::cast<half>(ptr[tid]));
+}
+
+void fp16_emulation(
+		float* const ptr,
+		const std::size_t size,
+		cudaStream_t cuda_stream
+		) {
+	constexpr std::size_t block_size = 256;
+	const auto grid_size = (size + block_size - 1) / block_size;
+
+	fp16_emulation_kernel<<<grid_size, block_size, 0, cuda_stream>>>(ptr, size);
+}
+} // noname namespace
+
 void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	const auto q = get_k() + get_p();
 
@@ -95,6 +120,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	profiler.start_timer_sync("gen_rand");
 #endif
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
+	fp16_emulation(working_memory.rand_mat_ptr, working_memory.rand_matrix_size, cuda_stream);
 
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("gen_rand");
