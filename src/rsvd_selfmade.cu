@@ -97,7 +97,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
 
 #ifdef TIME_BREAKDOWN
-	profiler.start_timer_sync("gen_rand");
+	profiler.stop_timer_sync("gen_rand");
 	profiler.start_timer_sync("matmul_1");
 #endif
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
