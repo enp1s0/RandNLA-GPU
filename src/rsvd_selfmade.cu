@@ -3,6 +3,7 @@
 #include <cutf/curand.hpp>
 
 namespace {
+#ifdef FP16_EMULATION
 __global__ void fp16_emulation_kernel(
 		float* const ptr,
 		const std::size_t size
@@ -25,6 +26,7 @@ void fp16_emulation(
 
 	fp16_emulation_kernel<<<grid_size, block_size, 0, cuda_stream>>>(ptr, size);
 }
+#endif // FP16_EMULATION
 } // noname namespace
 
 void mtk::rsvd_test::rsvd_selfmade::prepare() {
@@ -120,7 +122,9 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	profiler.start_timer_sync("gen_rand");
 #endif
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
+#ifdef FP16_EMULATION
 	fp16_emulation(working_memory.rand_mat_ptr, working_memory.rand_matrix_size, cuda_stream);
+#endif // FP16_EMULATION
 
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("gen_rand");
