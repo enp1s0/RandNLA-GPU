@@ -86,16 +86,18 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 
 	// generate random matrix
 	const uint64_t seed = 10;
+	const float alpha = 1.f, beta = 0.f;
 	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_MT19937);
 	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
 	CUTF_CHECK_ERROR(curandSetStream(*cugen.get(), cuda_stream));
 
+#ifdef TIME_BREAKDOWN
+	profiler.start_timer_sync("gen_rand");
+#endif
 	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
 
 #ifdef TIME_BREAKDOWN
-#endif
-	const float alpha = 1.f, beta = 0.f;
-#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("gen_rand");
 	profiler.start_timer_sync("matmul_1");
 #endif
 	CUTF_CHECK_ERROR(cutf::cublas::gemm(
