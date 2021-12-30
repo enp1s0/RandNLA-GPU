@@ -176,7 +176,13 @@ public:
 			):
 		cublas_handle(cublas_handle),
 		cusolver_handle(cusolver_handle),
-		rsvd_base("selfmade", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+		rsvd_base(
+#ifdef FP16_EMULATION
+				"fp16_emu",
+#else
+				"selfmade",
+#endif
+				m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();

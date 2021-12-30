@@ -5,6 +5,7 @@ CXXFLAGS+=-I./src/matfile/include
 CXXFLAGS+=-ltmglib -llapacke -llapack -lblas -lgfortran
 #CXXFLAGS+=-DTIME_BREAKDOWN
 #CXXFLAGS+=-DCUTF_DISABLE_MALLOC_ASYNC
+#CXXFLAGS+=-DFP16_EMULATION
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
