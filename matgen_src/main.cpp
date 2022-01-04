@@ -10,7 +10,7 @@ constexpr unsigned n_tests = 10;
 int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	int rank;
-	MPI_Comm_size(MPI_COMM_WORLD, &rank);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
 		for (unsigned log_n = 5; log_n <= max_log_n; log_n++) {
@@ -22,11 +22,13 @@ int main(int argc, char** argv) {
 				const std::size_t k = 1lu << log_k;
 
 				const std::string matrix_name = "latms-" + std::to_string(k);
-				mtk::rsvd_test::get_input_matrix(
-					uptr.get(), matrix_name,
-					m, n,
-					rank
-					);
+				if (!mtk::rsvd_test::exist_input_matrix(matrix_name, m, n, rank)) {
+					mtk::rsvd_test::get_input_matrix(
+						uptr.get(), matrix_name,
+						m, n,
+						rank
+						);
+				}
 			}
 		}
 	}
