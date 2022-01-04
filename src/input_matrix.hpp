@@ -12,6 +12,13 @@ void get_input_matrix(
 		const std::uint64_t seed
 		);
 
+int exist_input_matrix(
+		const std::string input_matrix_name,
+		const std::size_t m,
+		const std::size_t n,
+		const std::uint64_t seed
+		);
+
 // matgen
 void gen_latms_matrix(
 		float* const ptr,
