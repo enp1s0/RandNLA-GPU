@@ -2,6 +2,32 @@
 #include <matfile/matfile.hpp>
 #include <chrono>
 
+namespace {
+inline std::string sec2fmt(
+		std::uint64_t sec,
+		const bool trunc = false
+		) {
+	char buffer[64];
+
+	if ((!trunc) || (sec / (24 * 60 * 60))) {
+		std::sprintf(buffer, "%lud %02lu:%02lu:%02lu",
+				(sec / (24 * 60 * 60)),
+				(sec / (60 * 60)) % 24,
+				(sec / 60) % 60,
+				sec % 60
+				);
+	} else {
+		std::sprintf(buffer, "%02lu:%02lu:%02lu",
+				(sec / (60 * 60)) % 24,
+				(sec / 60) % 60,
+				sec % 60
+				);
+	}
+
+	return std::string(buffer);
+}
+}
+
 int mtk::rsvd_test::exist_input_matrix(
 	const std::string input_matrix_name,
 	const std::size_t m, const std::size_t n,
@@ -61,7 +87,7 @@ void mtk::rsvd_test::get_input_matrix(
 	}
 	const auto end_clock = std::chrono::system_clock::now();
 	const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;
-	std::fprintf(stderr, "Generated %s [%e]\n", file_path.c_str(), elapsed_time);
+	std::fprintf(stderr, "Generated %s [elapsed time = %s]\n", file_path.c_str(), sec2fmt(static_cast<std::uint64_t>(elapsed_time)).c_str());
 
 	if (generated) {
 		mtk::matfile::save_dense(
