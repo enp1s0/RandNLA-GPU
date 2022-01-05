@@ -1,6 +1,22 @@
 #include <input_matrix.hpp>
 #include <matfile/matfile.hpp>
 
+int mtk::rsvd_test::exist_input_matrix(
+	const std::string input_matrix_name,
+	const std::size_t m, const std::size_t n,
+	const std::uint64_t seed
+	) {
+	const std::string mat_file_name = input_matrix_name + "-m" + std::to_string(m) + "-n" + std::to_string(n) + "-seed" + std::to_string(seed) + ".matrix";
+	const std::string file_path = "./matrices/" + mat_file_name;
+	std::ifstream ifs(file_path, std::ios::binary);
+	if (!ifs) {
+		return 0;
+	}
+
+	ifs.close();
+	return 1;
+}
+
 void mtk::rsvd_test::get_input_matrix(
 	float *const ptr,
 	const std::string input_matrix_name,
