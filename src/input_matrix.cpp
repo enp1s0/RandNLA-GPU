@@ -1,5 +1,6 @@
 #include <input_matrix.hpp>
 #include <matfile/matfile.hpp>
+#include <chrono>
 
 int mtk::rsvd_test::exist_input_matrix(
 	const std::string input_matrix_name,
@@ -44,6 +45,7 @@ void mtk::rsvd_test::get_input_matrix(
 		matrix_name_base = input_matrix_name;
 	}
 
+	const auto start_clock = std::chrono::system_clock::now();
 	bool generated = false;
 	if (matrix_name_base == "latms") {
 		const auto rank_str = input_matrix_name.substr(input_matrix_name.find_first_of("-", 0) + 1);
@@ -57,6 +59,9 @@ void mtk::rsvd_test::get_input_matrix(
 			);
 		generated = true;
 	}
+	const auto end_clock = std::chrono::system_clock::now();
+	const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;
+	std::fprintf(stderr, "Generated %s [%e]\n", file_path.c_str(), elapsed_time);
 
 	if (generated) {
 		mtk::matfile::save_dense(
