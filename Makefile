@@ -31,6 +31,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	[ -d $(OBJDIR) ] || mkdir $(OBJDIR)
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) $< -c -o $@
 
+matgen_main: matgen_src/main.cpp $(SRCDIR)/input_matrix.cpp $(SRCDIR)/input_matrix_latms.cpp
+	$(CXX) $+ $(CXXFLAGS) $(OMPFLAGS) -o $@ -lmpi
+
 clean:
 	rm -rf $(OBJS)
 	rm -rf $(TARGET)
