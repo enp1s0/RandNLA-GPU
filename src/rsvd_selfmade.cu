@@ -64,7 +64,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.b_matrix_size = get_n() * q;
 
 	// SVDJ
-	constexpr double tol = 1e-7;
+	constexpr double tol = 1e-6;
 	CUTF_CHECK_ERROR(cusolverDnCreateGesvdjInfo(&svdj_params));
 	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, get_n_svdj_iter()));
 	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetTolerance(svdj_params, tol));
