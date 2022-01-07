@@ -164,7 +164,12 @@ int main() {
 						);
 				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
+				std::printf("# START human time-breakdown-%s-%u-%u-%u-%u\n", matrix_name.c_str(), m, n, k, p);
 				rsvd_selfmade.print_time_breakdown();
+				std::printf("# END human\n");
+				std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u\n", matrix_name.c_str(), m, n, k, p);
+				rsvd_selfmade.print_time_breakdown(true);
+				std::printf("# END csv\n");
 #endif
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
