@@ -35,7 +35,7 @@ matgen_main: matgen_src/main.cpp $(SRCDIR)/input_matrix.cpp $(SRCDIR)/input_matr
 	$(CXX) $+ $(CXXFLAGS) $(OMPFLAGS) -o $@ -lmpi
 
 breakdown_aggregator: src/aggregator_main.cpp
-	$(CXX) $+ $(CXXFLAGS) $(OMPFLAGS) -o $@
+	$(CXX) $+ -std=c++17 -o $@
 
 clean:
 	rm -rf $(OBJS)
