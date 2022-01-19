@@ -1,8 +1,8 @@
 #ifndef __MP_RSVD_RAND_PROJECTION_BASE_HPP__
 #define __MP_RSVD_RAND_PROJECTION_BASE_HPP__
 #include <string>
-//#include <cublas.h>
-//#include <cublas_v2.h>
+#include <shgemm/shgemm.hpp>
+#include <cutf/cublas.hpp>
 
 namespace mtk {
 namespace rsvd_test {
@@ -51,6 +51,26 @@ class random_projection_fp32 : public random_projection_base {
 	cublasHandle_t cublas_handle;
 public:
 	random_projection_fp32(cublasHandle_t const cublas_handle) : random_projection_base("rndprj_FP32"), cublas_handle(cublas_handle) {}
+
+	void allocate_working_memory();
+	void free_working_memory();
+	void gen_rand(const std::uint64_t seed);
+	void apply(
+			float* const dst_ptr, const std::size_t ldd,
+			float* const src_ptr, const std::size_t lds
+			);
+};
+
+class random_projection_shgemm : public random_projection_base {
+	const std::string name;
+
+	half* rand_matrix_ptr;
+
+	mtk::shgemm::shgemmHandle_t& shgemm_handle;
+public:
+	random_projection_shgemm(
+			mtk::shgemm::shgemmHandle_t& shgemm_handle
+			) : random_projection_base("rndprj_shgemm"), shgemm_handle(shgemm_handle) {}
 
 	void allocate_working_memory();
 	void free_working_memory();
