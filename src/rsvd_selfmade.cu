@@ -129,8 +129,8 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	profiler.start_timer_sync("matmul_1");
 #endif
 	rand_proj.apply(
-				A_ptr, get_m(),
-				working_memory.y_matrix_ptr, get_m()
+				working_memory.y_matrix_ptr, get_m(),
+				A_ptr, get_m()
 			);
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_1");
@@ -232,4 +232,5 @@ void mtk::rsvd_test::rsvd_selfmade::clean() {
 	cutf::memory::free_async(working_memory.alloc_ptr, cuda_stream);
 	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 	CUTF_CHECK_ERROR(cusolverDnDestroyGesvdjInfo(svdj_params));
+	rand_proj.free_working_memory();
 }
