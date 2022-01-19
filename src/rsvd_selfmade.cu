@@ -35,7 +35,11 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	int tmp_work_size;
 
 	// MATMUL(RAND)
-	working_memory.rand_matrix_size = get_n() * q;
+	rand_proj.set_config(
+			get_m(), get_n(), q,
+			cuda_stream
+			);
+	rand_proj.allocate_working_memory();
 	working_memory.y_matrix_size = get_m() * q;
 
 	// QR
@@ -87,14 +91,13 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 
 	// Memory allocation
 	const std::size_t cusolver_working_memory_size = std::max(std::max(working_memory.geqrf_0_size, working_memory.orgqr_0_size), working_memory.gesvdj_size);
-	const std::size_t tmp_matrix_size = working_memory.rand_matrix_size + working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size + working_memory.small_u_size;
+	const std::size_t tmp_matrix_size = working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size + working_memory.small_u_size;
 
 	// Allocate
 	working_memory.alloc_ptr = cutf::memory::malloc_async<float>(cusolver_working_memory_size + tmp_matrix_size, cuda_stream);
 
 	// Split
-	working_memory.rand_mat_ptr = working_memory.alloc_ptr;
-	working_memory.y_matrix_ptr = working_memory.rand_mat_ptr + working_memory.rand_matrix_size;
+	working_memory.y_matrix_ptr = working_memory.alloc_ptr;
 	working_memory.b_matrix_ptr = working_memory.y_matrix_ptr + working_memory.y_matrix_size;
 	working_memory.tau_ptr = working_memory.b_matrix_ptr + working_memory.b_matrix_size;
 	working_memory.full_V_ptr = working_memory.tau_ptr + working_memory.tau_size;
@@ -114,32 +117,21 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	// generate random matrix
 	const uint64_t seed = 10;
 	const float alpha = 1.f, beta = 0.f;
-	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_PHILOX4_32_10);
-	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
-	CUTF_CHECK_ERROR(curandSetStream(*cugen.get(), cuda_stream));
 
 #ifdef TIME_BREAKDOWN
 	profiler.start_timer_sync("gen_rand");
 #endif
-	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), working_memory.rand_mat_ptr, working_memory.rand_matrix_size));
-#ifdef FP16_EMULATION
-	fp16_emulation(working_memory.rand_mat_ptr, working_memory.rand_matrix_size, cuda_stream);
-#endif // FP16_EMULATION
+
+	rand_proj.gen_rand(seed);
 
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("gen_rand");
 	profiler.start_timer_sync("matmul_1");
 #endif
-	CUTF_CHECK_ERROR(cutf::cublas::gemm(
-				cublas_handle,
-				CUBLAS_OP_N, CUBLAS_OP_N,
-				get_m(), q, get_n(),
-				&alpha,
+	rand_proj.apply(
 				A_ptr, get_m(),
-				working_memory.rand_mat_ptr, get_n(),
-				&beta,
 				working_memory.y_matrix_ptr, get_m()
-				));
+			);
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_1");
 	profiler.start_timer_sync("qr");

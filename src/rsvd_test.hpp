@@ -5,6 +5,7 @@
 #include <cutf/cublas.hpp>
 #include <cutf/memory.hpp>
 #include <cutf/debug/time_breakdown.hpp>
+#include <rand_projection_base.hpp>
 
 namespace mtk {
 namespace rsvd_test {
@@ -135,6 +136,8 @@ class rsvd_selfmade : public rsvd_base {
 	gesvdjInfo_t svdj_params;
 	cublasHandle_t cublas_handle;
 
+	mtk::rsvd_test::random_projection_base& rand_proj;
+
 	// working memory size
 	struct {
 		float* alloc_ptr;
@@ -146,8 +149,6 @@ class rsvd_selfmade : public rsvd_base {
 		float* tau_ptr;
 		std::size_t gesvdj_size;
 		float* gesvdj_ptr;
-		std::size_t rand_matrix_size;
-		float* rand_mat_ptr;
 		std::size_t y_matrix_size;
 		float* y_matrix_ptr;
 		std::size_t b_matrix_size;
@@ -172,7 +173,8 @@ public:
 			float* const U_ptr, const unsigned ldu,
 			float* const S_ptr,
 			float* const V_ptr, const unsigned ldv,
-			cudaStream_t const cuda_stream
+			cudaStream_t const cuda_stream,
+			mtk::rsvd_test::random_projection_base& rand_proj
 			):
 		cublas_handle(cublas_handle),
 		cusolver_handle(cusolver_handle),
@@ -180,9 +182,10 @@ public:
 #ifdef FP16_EMULATION
 				"fp16_emu",
 #else
-				"selfmade",
+				std::string("selfmade") + rand_proj.get_name(),
 #endif
-				m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+				m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream),
+				rand_proj(rand_proj)	{}
 
 	void prepare();
 	void run();

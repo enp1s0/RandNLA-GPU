@@ -151,6 +151,7 @@ int main() {
 						);
 				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 
+				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
 						*cublas_handle.get(),
 						*cusolver_handle.get(),
@@ -160,7 +161,8 @@ int main() {
 						nullptr, m,
 						nullptr,
 						nullptr, n,
-						*cuda_stream.get()
+						*cuda_stream.get(),
+						rand_proj_fp32
 						);
 				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
