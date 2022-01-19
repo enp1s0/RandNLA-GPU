@@ -7,3 +7,9 @@
 [submodule "src/matfile"]
 	path = src/matfile
 	url = https://github.com/enp1s0/matfile
+[submodule "src/shgemm"]
+	path = src/shgemm
+	url = git@gitlab.momo86.net:mutsuki/shgemm.git
+[submodule "src/curand_fp16"]
+	path = src/curand_fp16
+	url = https://github.com/enp1s0/curand_fp16
