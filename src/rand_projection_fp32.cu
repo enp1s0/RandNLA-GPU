@@ -1,7 +1,7 @@
 #include <cutf/curand.hpp>
 #include <cutf/cublas.hpp>
 #include <cutf/memory.hpp>
-#include "rand_projection_base.hpp"
+#include <rand_projection_base.hpp>
 
 void mtk::rsvd_test::random_projection_fp32::gen_rand(const std::uint64_t seed) {
 	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_PHILOX4_32_10);
