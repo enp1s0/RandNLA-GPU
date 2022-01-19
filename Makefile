@@ -34,7 +34,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 matgen_main: matgen_src/main.cpp $(SRCDIR)/input_matrix.cpp $(SRCDIR)/input_matrix_latms.cpp
 	$(CXX) $+ $(CXXFLAGS) $(OMPFLAGS) -o $@ -lmpi
 
-breakdown_aggregator: src/aggregator_main.cpp
+breakdown_aggregator: aggr_src/aggregator_main.cpp
 	$(CXX) $+ -std=c++17 -o $@
 
 clean:
