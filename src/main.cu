@@ -9,7 +9,9 @@
 #include <cutf/curand.hpp>
 #include <mateval/comparison_cuda.hpp>
 
+constexpr unsigned min_log_m = 9;
 constexpr unsigned max_log_m = 10;
+constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_svdj_iter = 20;
@@ -129,10 +131,10 @@ int main() {
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
 
 	print_csv_header();
-	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
-		for (unsigned log_n = 5; log_n <= max_log_n; log_n++) {
+	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
+		for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
 			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned log_k = 4; log_k <= max_log_k - 1; log_k++) {
+			for (unsigned log_k = std::min(min_log_m, min_log_n) - 1; log_k <= max_log_k - 1; log_k++) {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
