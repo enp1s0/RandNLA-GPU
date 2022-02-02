@@ -9,7 +9,9 @@
 #include <cutf/curand.hpp>
 #include <mateval/comparison_cuda.hpp>
 
+constexpr unsigned min_log_m = 9;
 constexpr unsigned max_log_m = 10;
+constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_svdj_iter = 20;
@@ -124,11 +126,15 @@ int main() {
 	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
 	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle.get(), *cuda_stream.get()));
 
+	mtk::shgemm::shgemmHandle_t shgemm_handle;
+	mtk::shgemm::create(shgemm_handle);
+	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
+
 	print_csv_header();
-	for (unsigned log_m = 5; log_m <= max_log_m; log_m++) {
-		for (unsigned log_n = 5; log_n <= max_log_n; log_n++) {
+	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
+		for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
 			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned log_k = 4; log_k <= max_log_k - 1; log_k++) {
+			for (unsigned log_k = std::min(min_log_m, min_log_n) - 1; log_k <= max_log_k - 1; log_k++) {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
@@ -151,26 +157,54 @@ int main() {
 						);
 				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 
-				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
-						*cublas_handle.get(),
-						*cusolver_handle.get(),
-						*cusolver_params.get(),
-						m, n, k, p, n_svdj_iter,
-						nullptr, m,
-						nullptr, m,
-						nullptr,
-						nullptr, n,
-						*cuda_stream.get()
-						);
-				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+				{
+					mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
+					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+							*cublas_handle.get(),
+							*cusolver_handle.get(),
+							*cusolver_params.get(),
+							m, n, k, p, n_svdj_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get(),
+							rand_proj_fp32
+							);
+					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
-				std::printf("# START human time-breakdown-%s-%u-%u-%u-%u\n", matrix_name.c_str(), m, n, k, p);
-				rsvd_selfmade.print_time_breakdown();
-				std::printf("# END human\n");
-				std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u\n", matrix_name.c_str(), m, n, k, p);
-				rsvd_selfmade.print_time_breakdown(true);
-				std::printf("# END csv\n");
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_fp32.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown();
+					std::printf("# END human\n");
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_fp32.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown(true);
+					std::printf("# END csv\n");
 #endif
+				}
+				{
+					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle);
+					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+							*cublas_handle.get(),
+							*cusolver_handle.get(),
+							*cusolver_params.get(),
+							m, n, k, p, n_svdj_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get(),
+							rand_proj_shgemm
+							);
+					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+#ifdef TIME_BREAKDOWN
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_shgemm.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown();
+					std::printf("# END human\n");
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_shgemm.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown(true);
+					std::printf("# END csv\n");
+#endif
+				}
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
@@ -185,4 +219,5 @@ int main() {
 			}
 		}
 	}
+	mtk::shgemm::destroy(shgemm_handle);
 }

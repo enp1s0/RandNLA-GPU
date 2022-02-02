@@ -2,6 +2,8 @@ CXX=g++
 CXXFLAGS=-std=c++14 -I./src/cutf/include -O3 -I./src
 CXXFLAGS+=-I./src/mateval/include -L./src/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I./src/matfile/include
+CXXFLAGS+=-I./src/shgemm/include -L./src/shgemm/build -lshgemm
+CXXFLAGS+=-I./src/curand_fp16/include -L./src/curand_fp16/build -lcurand_fp16
 CXXFLAGS+=-ltmglib -llapacke -llapack -lblas -lgfortran
 #CXXFLAGS+=-DTIME_BREAKDOWN
 #CXXFLAGS+=-DCUTF_DISABLE_MALLOC_ASYNC
@@ -34,7 +36,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 matgen_main: matgen_src/main.cpp $(SRCDIR)/input_matrix.cpp $(SRCDIR)/input_matrix_latms.cpp
 	$(CXX) $+ $(CXXFLAGS) $(OMPFLAGS) -o $@ -lmpi
 
-breakdown_aggregator: src/aggregator_main.cpp
+breakdown_aggregator: aggr_src/aggregator_main.cpp
 	$(CXX) $+ -std=c++17 -o $@
 
 clean:
