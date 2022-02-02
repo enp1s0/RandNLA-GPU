@@ -182,6 +182,30 @@ int main() {
 #endif
 				}
 				{
+					mtk::rsvd_test::random_projection_tf32 rand_proj_tf32(*cublas_handle.get());
+					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+							*cublas_handle.get(),
+							*cusolver_handle.get(),
+							*cusolver_params.get(),
+							m, n, k, p, n_svdj_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get(),
+							rand_proj_tf32
+							);
+					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+#ifdef TIME_BREAKDOWN
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_tf32.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown();
+					std::printf("# END human\n");
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_tf32.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown(true);
+					std::printf("# END csv\n");
+#endif
+				}
+				{
 					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle);
 					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
 							*cublas_handle.get(),
