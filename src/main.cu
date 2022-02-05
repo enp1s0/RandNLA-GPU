@@ -14,11 +14,11 @@ constexpr unsigned max_log_m = 10;
 constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
-constexpr unsigned n_svdj_iter = 20;
+constexpr unsigned n_iter = 20;
 
 namespace {
 void print_csv_header() {
-	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
+	std::printf("implementation,matrix,m,n,k,p,n_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
 }
 void evaluate(
 		const std::string input_matrix_name,
@@ -33,7 +33,7 @@ void evaluate(
 			rsvd.get_n(),
 			rsvd.get_k(),
 			rsvd.get_p(),
-			rsvd.get_n_svdj_iter()
+			rsvd.get_n_iter()
 			);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
@@ -148,7 +148,7 @@ int main() {
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
 						*cusolver_params.get(),
-						m, n, k, p, n_svdj_iter,
+						m, n, k, p, n_iter,
 						nullptr, m,
 						nullptr, m,
 						nullptr,
@@ -163,7 +163,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
@@ -187,7 +187,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
@@ -208,7 +208,7 @@ int main() {
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
-						m, n, k, p, n_svdj_iter,
+						m, n, k, p, n_iter,
 						nullptr, m,
 						nullptr, m,
 						nullptr,
