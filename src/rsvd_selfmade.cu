@@ -90,12 +90,16 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.full_V_size = q * get_n();
 	working_memory.full_S_size = q;
 
+	// For power iteration
+	working_memory.bbt_size = q * q;
+
 	// Memory allocation
 	const std::size_t cusolver_working_memory_size = std::max(std::max(working_memory.geqrf_0_size, working_memory.orgqr_0_size), working_memory.gesvdj_size);
 	const std::size_t tmp_matrix_size = working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size + working_memory.small_u_size;
+	const std::size_t iter_working_size = (get_n_iter() == 0) ? 0lu : working_memory.b_matrix_size + working_memory.bbt_size;
 
 	// Allocate
-	working_memory.alloc_ptr = cutf::memory::malloc_async<float>(cusolver_working_memory_size + tmp_matrix_size, cuda_stream);
+	working_memory.alloc_ptr = cutf::memory::malloc_async<float>(cusolver_working_memory_size + tmp_matrix_size + iter_working_size, cuda_stream);
 
 	// Split
 	working_memory.y_matrix_ptr = working_memory.alloc_ptr;
@@ -104,7 +108,15 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.full_V_ptr = working_memory.tau_ptr + working_memory.tau_size;
 	working_memory.full_S_ptr = working_memory.tau_ptr;
 	working_memory.small_u_ptr = working_memory.full_V_ptr + working_memory.full_V_size;
-	working_memory.geqrf_0_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
+	if (get_n_iter() == 0) {
+		working_memory.geqrf_0_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
+		working_memory.b_2_ptr = working_memory.b_matrix_ptr;
+	} else {
+		working_memory.bbt_1_ptr = working_memory.small_u_ptr;
+		working_memory.bbt_2_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
+		working_memory.b_2_ptr = working_memory.bbt_2_ptr + working_memory.bbt_size;
+		working_memory.geqrf_0_ptr = working_memory.b_2_ptr + working_memory.b_matrix_size;
+	}
 	working_memory.gesvdj_ptr = working_memory.geqrf_0_ptr;
 	working_memory.orgqr_0_ptr = working_memory.geqrf_0_ptr;
 
@@ -177,6 +189,52 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	// SVD
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_2");
+#endif
+
+	if (get_n_iter()) {
+#ifdef TIME_BREAKDOWN
+	profiler.start_timer_sync("power_iter");
+#endif
+		CUTF_CHECK_ERROR(cutf::cublas::gemm(
+					cublas_handle,
+					CUBLAS_OP_N, CUBLAS_OP_T,
+					q, q, get_n(),
+					&alpha,
+					working_memory.b_matrix_ptr, q,
+					working_memory.b_matrix_ptr, q,
+					&beta,
+					working_memory.bbt_1_ptr, q
+					));
+		for (unsigned i = 1; i < get_n_iter(); i++) {
+			const float* const input_ptr = ((i & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
+			float* const output_ptr = ((i & 0x1) == 1) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_N,
+						q, q, q,
+						&alpha,
+						input_ptr, get_n(),
+						input_ptr, get_n(),
+						&beta,
+						output_ptr, q
+						));
+		}
+		const float* const bbt_ptr = ((get_n_iter() & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
+		CUTF_CHECK_ERROR(cutf::cublas::gemm(
+					cublas_handle,
+					CUBLAS_OP_N, CUBLAS_OP_N,
+					q, get_n(), q,
+					&alpha,
+					bbt_ptr, q,
+					working_memory.b_matrix_ptr, q,
+					&beta,
+					working_memory.b_2_ptr, q
+					));
+#ifdef TIME_BREAKDOWN
+	profiler.stop_timer_sync("power_iter");
+#endif
+	}
+#ifdef TIME_BREAKDOWN
 	profiler.start_timer_sync("svd");
 #endif
 	CUTF_CHECK_ERROR(cusolverDnSgesvdj(
@@ -184,7 +242,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				CUSOLVER_EIG_MODE_VECTOR,
 				1,
 				q, get_n(),
-				working_memory.b_matrix_ptr, q,
+				working_memory.b_2_ptr, q,
 				working_memory.full_S_ptr,
 				working_memory.small_u_ptr, q,
 				working_memory.full_V_ptr, get_n(),
@@ -223,6 +281,9 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 			working_memory.full_S_ptr, q,
 			cuda_stream
 			);
+	// Fix singular values
+	if (get_n_iter()) {
+	}
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_copy");
 #endif
