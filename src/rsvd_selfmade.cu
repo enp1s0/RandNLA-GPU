@@ -38,7 +38,7 @@ __global__ void power_iteration_singular_value_root_kernel (
 	if (tid >= s_array_size) {
 		return;
 	}
-	dst_s_array_ptr[tid] = powf(src_s_array_ptr[tid], -(2 * num_iter + 1));
+	dst_s_array_ptr[tid] = powf(src_s_array_ptr[tid], 1.f / (2 * num_iter + 1));
 }
 
 void power_iteration_singular_value_root(
@@ -144,7 +144,7 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 		working_memory.b_2_ptr = working_memory.b_matrix_ptr;
 	} else {
 		working_memory.bbt_1_ptr = working_memory.small_u_ptr;
-		working_memory.bbt_2_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
+		working_memory.bbt_2_ptr = working_memory.small_u_ptr + working_memory.bbt_size;
 		working_memory.b_2_ptr = working_memory.bbt_2_ptr + working_memory.bbt_size;
 		working_memory.geqrf_0_ptr = working_memory.b_2_ptr + working_memory.b_matrix_size;
 	}
@@ -224,7 +224,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 
 	if (get_n_iter()) {
 #ifdef TIME_BREAKDOWN
-	profiler.start_timer_sync("power_iter");
+		profiler.start_timer_sync("power_iter");
 #endif
 		CUTF_CHECK_ERROR(cutf::cublas::gemm(
 					cublas_handle,
@@ -237,15 +237,15 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 					working_memory.bbt_1_ptr, q
 					));
 		for (unsigned i = 1; i < get_n_iter(); i++) {
-			const float* const input_ptr = ((i & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
-			float* const output_ptr = ((i & 0x1) == 1) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
+			const float* const input_ptr  = ((i & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
+			float* const       output_ptr = ((i & 0x1) == 1) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
 			CUTF_CHECK_ERROR(cutf::cublas::gemm(
 						cublas_handle,
 						CUBLAS_OP_N, CUBLAS_OP_N,
 						q, q, q,
 						&alpha,
-						input_ptr, get_n(),
-						input_ptr, get_n(),
+						input_ptr, q,
+						input_ptr, q,
 						&beta,
 						output_ptr, q
 						));
@@ -262,7 +262,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 					working_memory.b_2_ptr, q
 					));
 #ifdef TIME_BREAKDOWN
-	profiler.stop_timer_sync("power_iter");
+		profiler.stop_timer_sync("power_iter");
 #endif
 	}
 #ifdef TIME_BREAKDOWN
@@ -306,14 +306,22 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 			working_memory.full_V_ptr, get_n(),
 			cuda_stream
 			);
-	mtk::rsvd_test::copy_matrix(
-			get_k(), 1,
-			S_ptr, get_k(),
-			working_memory.full_S_ptr, q,
-			cuda_stream
-			);
 	// Fix singular values
 	if (get_n_iter()) {
+		power_iteration_singular_value_root(
+				S_ptr,
+				working_memory.full_S_ptr,
+				get_k(),
+				get_n_iter(),
+				cuda_stream
+				);
+	} else {
+		mtk::rsvd_test::copy_matrix(
+				get_k(), 1,
+				S_ptr, get_k(),
+				working_memory.full_S_ptr, q,
+				cuda_stream
+				);
 	}
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_copy");
