@@ -61,6 +61,24 @@ public:
 			);
 };
 
+class random_projection_tf32 : public random_projection_base {
+	const std::string name;
+
+	float* rand_matrix_ptr;
+
+	cublasHandle_t cublas_handle;
+public:
+	random_projection_tf32(cublasHandle_t const cublas_handle) : random_projection_base("rndprj_TF32"), cublas_handle(cublas_handle) {}
+
+	void allocate_working_memory();
+	void free_working_memory();
+	void gen_rand(const std::uint64_t seed);
+	void apply(
+			float* const dst_ptr, const std::size_t ldd,
+			float* const src_ptr, const std::size_t lds
+			);
+};
+
 class random_projection_shgemm : public random_projection_base {
 	const std::string name;
 
