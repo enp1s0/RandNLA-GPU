@@ -187,7 +187,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
