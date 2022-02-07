@@ -27,6 +27,37 @@ void fp16_emulation(
 	fp16_emulation_kernel<<<grid_size, block_size, 0, cuda_stream>>>(ptr, size);
 }
 #endif // FP16_EMULATION
+
+__global__ void power_iteration_singular_value_root_kernel (
+		float* const dst_s_array_ptr,
+		const float* const src_s_array_ptr,
+		const std::size_t s_array_size,
+		const int num_iter
+		) {
+	const auto tid = blockIdx.x * blockDim.x + threadIdx.x;
+	if (tid >= s_array_size) {
+		return;
+	}
+	dst_s_array_ptr[tid] = powf(src_s_array_ptr[tid], -(2 * num_iter + 1));
+}
+
+void power_iteration_singular_value_root(
+		float* const dst_s_array_ptr,
+		const float* const src_s_array_ptr,
+		const std::size_t s_array_size,
+		const int num_iter,
+		cudaStream_t cuda_stream
+		) {
+	constexpr unsigned block_size = 256;
+	const unsigned grid_size = (s_array_size + block_size - 1) / block_size;
+
+	power_iteration_singular_value_root_kernel<<<block_size, grid_size, 1, cuda_stream>>>(
+			dst_s_array_ptr,
+			src_s_array_ptr,
+			s_array_size,
+			num_iter
+			);
+}
 } // noname namespace
 
 void mtk::rsvd_test::rsvd_selfmade::prepare() {
