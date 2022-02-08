@@ -30,7 +30,7 @@ protected:
 	float* V_ptr;
 	const unsigned ldv;
 
-	const unsigned n_svdj_iter;
+	const unsigned n_iter;
 
 	cudaStream_t cuda_stream;
 
@@ -40,7 +40,7 @@ protected:
 			const std::string name,
 			const unsigned m, const unsigned n,
 			const unsigned k, const unsigned p,
-			const unsigned n_svdj_iter,
+			const unsigned n_iter,
 			float* const A_ptr, const unsigned lda,
 			float* const U_ptr, const unsigned ldu,
 			float* const S_ptr,
@@ -50,7 +50,7 @@ protected:
 		name(name),
 		m(m), n(n),
 		k(k), p(p),
-		n_svdj_iter(n_svdj_iter),
+		n_iter(n_iter),
 		A_ptr(A_ptr), lda(lda),
 		U_ptr(U_ptr), ldu(ldu),
 		S_ptr(S_ptr),
@@ -67,7 +67,7 @@ public:
 	unsigned get_n() const {return n;}
 	unsigned get_k() const {return k;}
 	unsigned get_p() const {return p;}
-	unsigned get_n_svdj_iter() const {return n_svdj_iter;}
+	unsigned get_n_iter() const {return n_iter;}
 
 	std::string get_name() const {
 		return name;
@@ -115,7 +115,7 @@ public:
 			cusolverDnParams_t cusolver_params,
 			const unsigned m, const unsigned n,
 			const unsigned k, const unsigned p,
-			const unsigned n_svdj_iter,
+			const unsigned n_iter,
 			float* const A_ptr, const unsigned lda,
 			float* const U_ptr, const unsigned ldu,
 			float* const S_ptr,
@@ -124,7 +124,7 @@ public:
 			):
 		cusolver_handle(cusolver_handle),
 		cusolver_params(cusolver_params),
-		rsvd_base("cusolver_svdr", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+		rsvd_base("cusolver_svdr", m, n, k, p, n_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();
@@ -159,6 +159,10 @@ class rsvd_selfmade : public rsvd_base {
 		float* full_V_ptr;
 		std::size_t full_S_size;
 		float* full_S_ptr;
+		std::size_t bbt_size;
+		float* bbt_1_ptr;
+		float* bbt_2_ptr;
+		float* b_2_ptr;
 		int* devInfo_ptr;
 	} working_memory;
 public:
@@ -168,7 +172,7 @@ public:
 			cusolverDnParams_t cusolver_params,
 			const unsigned m, const unsigned n,
 			const unsigned k, const unsigned p,
-			const unsigned n_svdj_iter,
+			const unsigned n_iter,
 			float* const A_ptr, const unsigned lda,
 			float* const U_ptr, const unsigned ldu,
 			float* const S_ptr,
@@ -184,7 +188,7 @@ public:
 #else
 				std::string("selfmade-") + rand_proj.get_name(),
 #endif
-				m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream),
+				m, n, k, p, n_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream),
 				rand_proj(rand_proj)	{}
 
 	void prepare();
@@ -212,7 +216,7 @@ public:
 			cusolverDnHandle_t cusolver_handle,
 			const unsigned m, const unsigned n,
 			const unsigned k, const unsigned p,
-			const unsigned n_svdj_iter,
+			const unsigned n_iter,
 			float* const A_ptr, const unsigned lda,
 			float* const U_ptr, const unsigned ldu,
 			float* const S_ptr,
@@ -220,7 +224,7 @@ public:
 			cudaStream_t const cuda_stream
 			):
 		cusolver_handle(cusolver_handle),
-		rsvd_base("svdj", m, n, k, p, n_svdj_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
+		rsvd_base("svdj", m, n, k, p, n_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream) {}
 
 	void prepare();
 	void run();

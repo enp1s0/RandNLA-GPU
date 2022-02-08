@@ -14,11 +14,11 @@ constexpr unsigned max_log_m = 10;
 constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
-constexpr unsigned n_svdj_iter = 20;
+constexpr unsigned n_iter = 1;
 
 namespace {
 void print_csv_header() {
-	std::printf("implementation,matrix,m,n,k,p,n_svdj_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
+	std::printf("implementation,matrix,m,n,k,p,n_iter,residual,u_orthogonality,v_orthogonality,time,n_tests\n");
 }
 void evaluate(
 		const std::string input_matrix_name,
@@ -33,7 +33,7 @@ void evaluate(
 			rsvd.get_n(),
 			rsvd.get_k(),
 			rsvd.get_p(),
-			rsvd.get_n_svdj_iter()
+			rsvd.get_n_iter()
 			);
 	const auto A_size = rsvd.get_m() * rsvd.get_n();
 	const auto S_size = std::min(rsvd.get_m(), rsvd.get_n());
@@ -138,8 +138,9 @@ int main() {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
-				const auto p = k / 10;
-				if (k + p > std::min(m, n)) {
+				const auto decomp_k = k;
+				const auto p = decomp_k / 10;
+				if (decomp_k + p > std::min(m, n)) {
 					break;
 				}
 
@@ -148,7 +149,7 @@ int main() {
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
 						*cusolver_params.get(),
-						m, n, k, p, n_svdj_iter,
+						m, n, decomp_k, p, n_iter,
 						nullptr, m,
 						nullptr, m,
 						nullptr,
@@ -163,7 +164,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, decomp_k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
@@ -173,10 +174,10 @@ int main() {
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
-					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_fp32.get_name().c_str());
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_fp32.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown();
 					std::printf("# END human\n");
-					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_fp32.get_name().c_str());
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_fp32.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown(true);
 					std::printf("# END csv\n");
 #endif
@@ -187,7 +188,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, decomp_k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
@@ -197,10 +198,10 @@ int main() {
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
-					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_tf32.get_name().c_str());
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_tf32.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown();
 					std::printf("# END human\n");
-					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_tf32.get_name().c_str());
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_tf32.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown(true);
 					std::printf("# END csv\n");
 #endif
@@ -211,7 +212,7 @@ int main() {
 							*cublas_handle.get(),
 							*cusolver_handle.get(),
 							*cusolver_params.get(),
-							m, n, k, p, n_svdj_iter,
+							m, n, decomp_k, p, n_iter,
 							nullptr, m,
 							nullptr, m,
 							nullptr,
@@ -221,10 +222,10 @@ int main() {
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 #ifdef TIME_BREAKDOWN
-					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_shgemm.get_name().c_str());
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_shgemm.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown();
 					std::printf("# END human\n");
-					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, k, p, rand_proj_shgemm.get_name().c_str());
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_shgemm.get_name().c_str());
 					rsvd_selfmade.print_time_breakdown(true);
 					std::printf("# END csv\n");
 #endif
@@ -232,7 +233,7 @@ int main() {
 
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
-						m, n, k, p, n_svdj_iter,
+						m, n, decomp_k, p, n_iter,
 						nullptr, m,
 						nullptr, m,
 						nullptr,

@@ -9,8 +9,9 @@ void mtk::rsvd_test::svdj_cusolver::prepare() {
 
 	// SVDJ
 	constexpr double tol = 1e-7;
+	constexpr unsigned num_svdj_iter = 20;
 	CUTF_CHECK_ERROR(cusolverDnCreateGesvdjInfo(&svdj_params));
-	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, get_n_svdj_iter()));
+	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, num_svdj_iter));
 	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetTolerance(svdj_params, tol));
 
 	int tmp_working_memory_size;
