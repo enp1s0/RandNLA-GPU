@@ -340,7 +340,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 		profiler.stop_timer_sync("matmul_3");
 		profiler.start_timer_sync("matmul_copy");
 #endif
-		mtk::rsvd_test::transpose_matrix(
+		mtk::rsvd_test::copy_matrix(
 				get_n(), get_k(),
 				V_ptr, ldv,
 				working_memory.full_V_ptr, svd_ldv,
