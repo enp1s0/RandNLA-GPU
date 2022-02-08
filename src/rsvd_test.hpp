@@ -188,7 +188,7 @@ public:
 #ifdef FP16_EMULATION
 				"fp16_emu",
 #else
-				std::string("selfmade-") + rand_proj.get_name(),
+				std::string("selfmade-") + rand_proj.get_name() + "-" + svd.get_name_str(),
 #endif
 				m, n, k, p, n_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream),
 				svd(svd), rand_proj(rand_proj)	{}
