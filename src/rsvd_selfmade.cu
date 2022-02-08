@@ -63,6 +63,10 @@ void power_iteration_singular_value_root(
 void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	const auto q = get_k() + get_p();
 
+	if (get_n_iter() == 0) {
+		throw std::runtime_error("n_iter must be >= 1");
+	}
+
 	int tmp_work_size;
 
 	// MATMUL(RAND)
@@ -99,8 +103,11 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.b_matrix_size = get_n() * q;
 
 	// SVDJ
-	// TODO
-	svd.prepare(q, get_n());
+	if (svd.get_name_str() == "svd_jaccobi") {
+		svd.prepare(q, get_n());
+	} else {
+		svd.prepare(get_n(), q);
+	}
 	working_memory.gesvdj_size = svd.get_working_mem_size();
 	working_memory.small_u_size = q * q;
 	working_memory.full_V_size = q * get_n();
@@ -236,64 +243,116 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 						));
 		}
 		const float* const bbt_ptr = ((get_n_iter() & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
-		CUTF_CHECK_ERROR(cutf::cublas::gemm(
-					cublas_handle,
-					CUBLAS_OP_N, CUBLAS_OP_N,
-					q, get_n(), q,
-					&alpha,
-					bbt_ptr, q,
-					working_memory.b_matrix_ptr, q,
-					&beta,
-					working_memory.b_2_ptr, q
-					));
+		if (svd.get_name_str() == "svd_jaccobi") {
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_N,
+						q, get_n(), q,
+						&alpha,
+						bbt_ptr, q,
+						working_memory.b_matrix_ptr, q,
+						&beta,
+						working_memory.b_2_ptr, q
+						));
+		} else {
+			// When using svd_qr, the input matrix must be transposed because it must be tall.
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_T, CUBLAS_OP_T,
+						get_n(), q, q,
+						&alpha,
+						working_memory.b_matrix_ptr, q,
+						bbt_ptr, q,
+						&beta,
+						working_memory.b_2_ptr, q
+						));
+		}
 #ifdef TIME_BREAKDOWN
 		profiler.stop_timer_sync("power_iter");
 #endif
 	}
+	if (svd.get_name_str() == "svd_jaccobi") {
 #ifdef TIME_BREAKDOWN
-	profiler.start_timer_sync("svd");
+		profiler.start_timer_sync("svd");
 #endif
-	const auto svd_ldv = (svd.op_v() == 'N') ? get_n() : q;
-	svd.run(
+		const auto svd_ldv = get_n();
+		svd.run(
 				working_memory.full_S_ptr,
 				working_memory.small_u_ptr, q,
 				working_memory.full_V_ptr, svd_ldv,
 				working_memory.b_2_ptr, q,
 				working_memory.gesvdj_ptr
-			);
+				);
 #ifdef TIME_BREAKDOWN
-	profiler.stop_timer_sync("svd");
-	profiler.start_timer_sync("matmul_3");
+		profiler.stop_timer_sync("svd");
+		profiler.start_timer_sync("matmul_3");
 #endif
-	CUTF_CHECK_ERROR(cutf::cublas::gemm(
-				cublas_handle,
-				CUBLAS_OP_N, CUBLAS_OP_N,
-				get_m(), k, q,
-				&alpha,
-				working_memory.y_matrix_ptr, get_m(),
-				working_memory.small_u_ptr, q,
-				&beta,
-				U_ptr, ldu
-				));
+		CUTF_CHECK_ERROR(cutf::cublas::gemm(
+					cublas_handle,
+					CUBLAS_OP_N, CUBLAS_OP_N,
+					get_m(), k, q,
+					&alpha,
+					working_memory.y_matrix_ptr, get_m(),
+					working_memory.small_u_ptr, q,
+					&beta,
+					U_ptr, ldu
+					));
 #ifdef TIME_BREAKDOWN
-	profiler.stop_timer_sync("matmul_3");
-	profiler.start_timer_sync("matmul_copy");
+		profiler.stop_timer_sync("matmul_3");
+		profiler.start_timer_sync("matmul_copy");
 #endif
-	if (svd.op_v() == 'N') {
 		mtk::rsvd_test::copy_matrix(
 				get_n(), get_k(),
 				V_ptr, ldv,
 				working_memory.full_V_ptr, svd_ldv,
 				cuda_stream
 				);
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("matmul_copy");
+#endif
 	} else {
+#ifdef TIME_BREAKDOWN
+		profiler.start_timer_sync("svd");
+#endif
+		const auto svd_ldv = get_n();
+		svd.run(
+				working_memory.full_S_ptr,
+				working_memory.full_V_ptr, svd_ldv,
+				working_memory.small_u_ptr, q,
+				working_memory.b_2_ptr, q,
+				working_memory.gesvdj_ptr
+				);
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("svd");
+		profiler.start_timer_sync("matmul_3");
+#endif
+		CUTF_CHECK_ERROR(cutf::cublas::gemm(
+					cublas_handle,
+					CUBLAS_OP_N, CUBLAS_OP_T,
+					get_m(), k, q,
+					&alpha,
+					working_memory.y_matrix_ptr, get_m(),
+					working_memory.small_u_ptr, q,
+					&beta,
+					U_ptr, ldu
+					));
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("matmul_3");
+		profiler.start_timer_sync("matmul_copy");
+#endif
 		mtk::rsvd_test::transpose_matrix(
 				get_n(), get_k(),
 				V_ptr, ldv,
 				working_memory.full_V_ptr, svd_ldv,
 				cuda_stream
 				);
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("matmul_copy");
+#endif
 	}
+#ifdef TIME_BREAKDOWN
+	profiler.start_timer_sync("adjust_s");
+#endif
 	// Fix singular values
 	if (get_n_iter()) {
 		power_iteration_singular_value_root(
@@ -312,7 +371,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				);
 	}
 #ifdef TIME_BREAKDOWN
-	profiler.stop_timer_sync("matmul_copy");
+		profiler.stop_timer_sync("adjust_s");
 #endif
 }
 
