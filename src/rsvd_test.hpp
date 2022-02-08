@@ -6,6 +6,7 @@
 #include <cutf/memory.hpp>
 #include <cutf/debug/time_breakdown.hpp>
 #include <rand_projection_base.hpp>
+#include <svd_base.hpp>
 
 namespace mtk {
 namespace rsvd_test {
@@ -133,10 +134,10 @@ public:
 
 class rsvd_selfmade : public rsvd_base {
 	cusolverDnHandle_t cusolver_handle;
-	gesvdjInfo_t svdj_params;
 	cublasHandle_t cublas_handle;
 
 	mtk::rsvd_test::random_projection_base& rand_proj;
+	mtk::rsvd_test::svd_base& svd;
 
 	// working memory size
 	struct {
@@ -178,6 +179,7 @@ public:
 			float* const S_ptr,
 			float* const V_ptr, const unsigned ldv,
 			cudaStream_t const cuda_stream,
+			mtk::rsvd_test::svd_base& svd,
 			mtk::rsvd_test::random_projection_base& rand_proj
 			):
 		cublas_handle(cublas_handle),
@@ -186,10 +188,10 @@ public:
 #ifdef FP16_EMULATION
 				"fp16_emu",
 #else
-				std::string("selfmade-") + rand_proj.get_name(),
+				std::string("selfmade-") + rand_proj.get_name() + "-" + svd.get_name_str(),
 #endif
 				m, n, k, p, n_iter, A_ptr, lda, U_ptr, ldu, S_ptr, V_ptr, ldv, cuda_stream),
-				rand_proj(rand_proj)	{}
+				svd(svd), rand_proj(rand_proj)	{}
 
 	void prepare();
 	void run();
@@ -233,6 +235,12 @@ public:
 
 void copy_matrix(
 		const std::size_t m, const std::size_t n,
+		float* const dst_ptr, const std::size_t ldd,
+		const float* const src_ptr, const std::size_t lds,
+		cudaStream_t cuda_stream
+		);
+void transpose_matrix(
+		const std::size_t dst_m, const std::size_t dst_n,
 		float* const dst_ptr, const std::size_t ldd,
 		const float* const src_ptr, const std::size_t lds,
 		cudaStream_t cuda_stream

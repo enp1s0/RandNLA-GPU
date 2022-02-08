@@ -15,6 +15,7 @@ constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 1;
+using svd_t = mtk::rsvd_test::svd_jaccobi;
 
 namespace {
 void print_csv_header() {
@@ -145,6 +146,8 @@ int main() {
 				}
 
 				const std::string matrix_name = "latms-" + std::to_string(k);
+				
+				svd_t svd(*cusolver_handle.get());
 
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
@@ -170,6 +173,7 @@ int main() {
 							nullptr,
 							nullptr, n,
 							*cuda_stream.get(),
+							svd,
 							rand_proj_fp32
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
@@ -194,6 +198,7 @@ int main() {
 							nullptr,
 							nullptr, n,
 							*cuda_stream.get(),
+							svd,
 							rand_proj_tf32
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
@@ -218,6 +223,7 @@ int main() {
 							nullptr,
 							nullptr, n,
 							*cuda_stream.get(),
+							svd,
 							rand_proj_shgemm
 							);
 					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
