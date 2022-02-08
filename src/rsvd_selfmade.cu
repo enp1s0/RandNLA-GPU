@@ -264,7 +264,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 						working_memory.b_matrix_ptr, q,
 						bbt_ptr, q,
 						&beta,
-						working_memory.b_2_ptr, q
+						working_memory.b_2_ptr, get_n()
 						));
 		}
 #ifdef TIME_BREAKDOWN
@@ -319,7 +319,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				working_memory.full_S_ptr,
 				working_memory.full_V_ptr, svd_ldv,
 				working_memory.small_u_ptr, q,
-				working_memory.b_2_ptr, q,
+				working_memory.b_2_ptr, get_n(),
 				working_memory.gesvdj_ptr
 				);
 #ifdef TIME_BREAKDOWN
