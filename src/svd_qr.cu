@@ -1,13 +1,13 @@
 #include "svd_base.hpp"
 #include <cutf/cusolver.hpp>
 
-std::size_t mtk::rsvd_test::svd_qr::get_working_mem_size_in_byte() {
+std::size_t mtk::rsvd_test::svd_qr::get_working_mem_size() {
 	int lwork;
 	CUTF_CHECK_ERROR(cusolverDnSgesvd_bufferSize(cusolver_handle, m, n, &lwork));
 
 	const std::size_t r_work = std::min(m, n) - 1;
 
-	work_size = (lwork + r_work) * sizeof(float) + sizeof(int);
+	work_size = (lwork + r_work) + 1;
 
 	return work_size;
 }
@@ -32,6 +32,6 @@ void mtk::rsvd_test::svd_qr::run(
 				work_ptr,
 				l_work,
 				work_ptr + l_work,
-				work_ptr + l_work + 1
+				reinterpret_cast<int*>(work_ptr + l_work + r_work)
 				));
 }

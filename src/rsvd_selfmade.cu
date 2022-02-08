@@ -99,24 +99,9 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.b_matrix_size = get_n() * q;
 
 	// SVDJ
-	constexpr double tol = 1e-6;
-	constexpr unsigned num_svdj_iter = 20;
-	CUTF_CHECK_ERROR(cusolverDnCreateGesvdjInfo(&svdj_params));
-	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetMaxSweeps(svdj_params, num_svdj_iter));
-	CUTF_CHECK_ERROR(cusolverDnXgesvdjSetTolerance(svdj_params, tol));
-	CUTF_CHECK_ERROR(cusolverDnSgesvdj_bufferSize(
-				cusolver_handle,
-				CUSOLVER_EIG_MODE_VECTOR,
-				1,
-				q, get_n(),
-				working_memory.b_matrix_ptr, get_n(),
-				S_ptr,
-				working_memory.small_u_ptr, q,
-				working_memory.full_V_ptr, get_n(),
-				&tmp_work_size,
-				svdj_params
-				));
-	working_memory.gesvdj_size = tmp_work_size;
+	// TODO
+	svd.prepare(q, get_n());
+	working_memory.gesvdj_size = svd.get_working_mem_size();
 	working_memory.small_u_size = q * q;
 	working_memory.full_V_size = q * get_n();
 	working_memory.full_S_size = q;
@@ -268,20 +253,14 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 #ifdef TIME_BREAKDOWN
 	profiler.start_timer_sync("svd");
 #endif
-	CUTF_CHECK_ERROR(cusolverDnSgesvdj(
-				cusolver_handle,
-				CUSOLVER_EIG_MODE_VECTOR,
-				1,
-				q, get_n(),
-				working_memory.b_2_ptr, q,
+	const auto svd_ldv = (svd.op_v() == 'N') ? get_n() : q;
+	svd.run(
 				working_memory.full_S_ptr,
 				working_memory.small_u_ptr, q,
-				working_memory.full_V_ptr, get_n(),
-				working_memory.gesvdj_ptr,
-				working_memory.gesvdj_size,
-				working_memory.devInfo_ptr,
-				svdj_params
-				));
+				working_memory.full_V_ptr, svd_ldv,
+				working_memory.b_2_ptr, q,
+				working_memory.gesvdj_ptr
+			);
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("svd");
 	profiler.start_timer_sync("matmul_3");
@@ -300,12 +279,21 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	profiler.stop_timer_sync("matmul_3");
 	profiler.start_timer_sync("matmul_copy");
 #endif
-	mtk::rsvd_test::copy_matrix(
-			get_n(), get_k(),
-			V_ptr, ldv,
-			working_memory.full_V_ptr, get_n(),
-			cuda_stream
-			);
+	if (svd.op_v() == 'N') {
+		mtk::rsvd_test::copy_matrix(
+				get_n(), get_k(),
+				V_ptr, ldv,
+				working_memory.full_V_ptr, svd_ldv,
+				cuda_stream
+				);
+	} else {
+		mtk::rsvd_test::transpose_matrix(
+				get_n(), get_k(),
+				V_ptr, ldv,
+				working_memory.full_V_ptr, svd_ldv,
+				cuda_stream
+				);
+	}
 	// Fix singular values
 	if (get_n_iter()) {
 		power_iteration_singular_value_root(
@@ -332,6 +320,6 @@ void mtk::rsvd_test::rsvd_selfmade::clean() {
 	cutf::memory::free_async(working_memory.devInfo_ptr, cuda_stream);
 	cutf::memory::free_async(working_memory.alloc_ptr, cuda_stream);
 	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
-	CUTF_CHECK_ERROR(cusolverDnDestroyGesvdjInfo(svdj_params));
+	svd.free();
 	rand_proj.free_working_memory();
 }
