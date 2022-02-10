@@ -15,7 +15,7 @@ constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 1;
-using svd_t = mtk::rsvd_test::svd_jaccobi;
+using svd_t = mtk::rsvd_test::svd_qr;
 
 namespace {
 void print_csv_header() {
