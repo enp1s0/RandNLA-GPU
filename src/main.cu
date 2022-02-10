@@ -149,7 +149,7 @@ int main() {
 				
 				svd_t svd(*cusolver_handle.get());
 
-#ifndef TIME_BREAKDOWN
+#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
 						*cusolver_params.get(),
@@ -239,7 +239,7 @@ int main() {
 #endif
 				}
 
-#ifndef TIME_BREAKDOWN
+#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
 						m, n, decomp_k, p, n_iter,
