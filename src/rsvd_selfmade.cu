@@ -196,83 +196,24 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	// MATMUL(2)
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("qr");
-	profiler.start_timer_sync("matmul_2");
 #endif
-	CUTF_CHECK_ERROR(cutf::cublas::gemm(
-				cublas_handle,
-				CUBLAS_OP_T, CUBLAS_OP_N,
-				q, get_n(), get_m(),
-				&alpha,
-				working_memory.y_matrix_ptr, get_m(),
-				A_ptr, get_m(),
-				&beta,
-				working_memory.b_matrix_ptr, q
-				));
-
-	// SVD
+	if (svd.get_name_str() == "svd_jaccobi") {
 #ifdef TIME_BREAKDOWN
-	profiler.stop_timer_sync("matmul_2");
-#endif
-
-	if (get_n_iter()) {
-#ifdef TIME_BREAKDOWN
-		profiler.start_timer_sync("power_iter");
+		profiler.start_timer_sync("matmul_2");
 #endif
 		CUTF_CHECK_ERROR(cutf::cublas::gemm(
 					cublas_handle,
-					CUBLAS_OP_N, CUBLAS_OP_T,
-					q, q, get_n(),
+					CUBLAS_OP_T, CUBLAS_OP_N,
+					q, get_n(), get_m(),
 					&alpha,
-					working_memory.b_matrix_ptr, q,
-					working_memory.b_matrix_ptr, q,
+					working_memory.y_matrix_ptr, get_m(),
+					A_ptr, get_m(),
 					&beta,
-					working_memory.bbt_1_ptr, q
+					working_memory.b_matrix_ptr, q
 					));
-		for (unsigned i = 1; i < get_n_iter(); i++) {
-			const float* const input_ptr  = ((i & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
-			float* const       output_ptr = ((i & 0x1) == 1) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
-			CUTF_CHECK_ERROR(cutf::cublas::gemm(
-						cublas_handle,
-						CUBLAS_OP_N, CUBLAS_OP_N,
-						q, q, q,
-						&alpha,
-						input_ptr, q,
-						input_ptr, q,
-						&beta,
-						output_ptr, q
-						));
-		}
-		const float* const bbt_ptr = ((get_n_iter() & 0x1) == 0) ? working_memory.bbt_2_ptr : working_memory.bbt_1_ptr;
-		if (svd.get_name_str() == "svd_jaccobi") {
-			CUTF_CHECK_ERROR(cutf::cublas::gemm(
-						cublas_handle,
-						CUBLAS_OP_N, CUBLAS_OP_N,
-						q, get_n(), q,
-						&alpha,
-						bbt_ptr, q,
-						working_memory.b_matrix_ptr, q,
-						&beta,
-						working_memory.b_2_ptr, q
-						));
-		} else {
-			// When using svd_qr, the input matrix must be transposed because it must be tall.
-			CUTF_CHECK_ERROR(cutf::cublas::gemm(
-						cublas_handle,
-						CUBLAS_OP_T, CUBLAS_OP_T,
-						get_n(), q, q,
-						&alpha,
-						working_memory.b_matrix_ptr, q,
-						bbt_ptr, q,
-						&beta,
-						working_memory.b_2_ptr, get_n()
-						));
-		}
+
 #ifdef TIME_BREAKDOWN
-		profiler.stop_timer_sync("power_iter");
-#endif
-	}
-	if (svd.get_name_str() == "svd_jaccobi") {
-#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("matmul_2");
 		profiler.start_timer_sync("svd");
 #endif
 		const auto svd_ldv = get_n();
@@ -280,7 +221,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				working_memory.full_S_ptr,
 				working_memory.small_u_ptr, q,
 				working_memory.full_V_ptr, svd_ldv,
-				working_memory.b_2_ptr, q,
+				working_memory.b_matrix_ptr, q,
 				working_memory.gesvdj_ptr
 				);
 #ifdef TIME_BREAKDOWN
@@ -310,8 +251,23 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 #ifdef TIME_BREAKDOWN
 		profiler.stop_timer_sync("matmul_copy");
 #endif
-	} else {
+	} else { // <<<svd_jaccobi, svd_qr>>>
 #ifdef TIME_BREAKDOWN
+		profiler.start_timer_sync("matmul_2");
+#endif
+		CUTF_CHECK_ERROR(cutf::cublas::gemm(
+					cublas_handle,
+					CUBLAS_OP_T, CUBLAS_OP_N,
+					get_n(), q, get_m(),
+					&alpha,
+					A_ptr, get_m(),
+					working_memory.y_matrix_ptr, get_m(),
+					&beta,
+					working_memory.b_matrix_ptr, get_n()
+					));
+
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("matmul_2");
 		profiler.start_timer_sync("svd");
 #endif
 		const auto svd_ldv = get_n();
@@ -319,7 +275,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				working_memory.full_S_ptr,
 				working_memory.full_V_ptr, svd_ldv,
 				working_memory.small_u_ptr, q,
-				working_memory.b_2_ptr, get_n(),
+				working_memory.b_matrix_ptr, get_n(),
 				working_memory.gesvdj_ptr
 				);
 #ifdef TIME_BREAKDOWN
@@ -359,7 +315,8 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				S_ptr,
 				working_memory.full_S_ptr,
 				get_k(),
-				get_n_iter(),
+				0,
+				//get_n_iter(),
 				cuda_stream
 				);
 	} else {
