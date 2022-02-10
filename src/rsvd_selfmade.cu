@@ -63,10 +63,6 @@ void power_iteration_singular_value_root(
 void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	const auto q = get_k() + get_p();
 
-	if (get_n_iter() == 0) {
-		throw std::runtime_error("n_iter must be >= 1");
-	}
-
 	int tmp_work_size;
 
 	// MATMUL(RAND)
@@ -114,32 +110,32 @@ void mtk::rsvd_test::rsvd_selfmade::prepare() {
 	working_memory.full_S_size = q;
 
 	// For power iteration
-	working_memory.bbt_size = q * q;
+	working_memory.X_tmp_size = std::min(get_m() * get_m(), get_n() * get_n());
 
 	// Memory allocation
 	const std::size_t cusolver_working_memory_size = std::max(std::max(working_memory.geqrf_0_size, working_memory.orgqr_0_size), working_memory.gesvdj_size);
 	const std::size_t tmp_matrix_size = working_memory.y_matrix_size + working_memory.tau_size + working_memory.b_matrix_size + working_memory.full_V_size + working_memory.small_u_size;
-	const std::size_t iter_working_size = (get_n_iter() == 0) ? 0lu : working_memory.b_matrix_size + working_memory.bbt_size;
+	const std::size_t iter_working_size = (get_n_iter() == 0) ? 0lu : (get_m() * get_n() + 2 * working_memory.X_tmp_size);
 
 	// Allocate
 	working_memory.alloc_ptr = cutf::memory::malloc_async<float>(cusolver_working_memory_size + tmp_matrix_size + iter_working_size, cuda_stream);
 
+	working_memory.X_ptr = working_memory.alloc_ptr;
+	working_memory.X_tmp_ptr[0] = working_memory.X_ptr + get_m() * get_n();
+	working_memory.X_tmp_ptr[1] = working_memory.X_tmp_ptr[0] + working_memory.X_tmp_size;
+
 	// Split
-	working_memory.y_matrix_ptr = working_memory.alloc_ptr;
+	if (get_n_iter()) {
+		working_memory.y_matrix_ptr = working_memory.X_tmp_ptr[1] + working_memory.X_tmp_size;
+	} else {
+		working_memory.y_matrix_ptr = working_memory.alloc_ptr;
+	}
 	working_memory.b_matrix_ptr = working_memory.y_matrix_ptr + working_memory.y_matrix_size;
 	working_memory.tau_ptr = working_memory.b_matrix_ptr + working_memory.b_matrix_size;
 	working_memory.full_V_ptr = working_memory.tau_ptr + working_memory.tau_size;
 	working_memory.full_S_ptr = working_memory.tau_ptr;
 	working_memory.small_u_ptr = working_memory.full_V_ptr + working_memory.full_V_size;
-	if (get_n_iter() == 0) {
-		working_memory.geqrf_0_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
-		working_memory.b_2_ptr = working_memory.b_matrix_ptr;
-	} else {
-		working_memory.bbt_1_ptr = working_memory.small_u_ptr;
-		working_memory.bbt_2_ptr = working_memory.small_u_ptr + working_memory.bbt_size;
-		working_memory.b_2_ptr = working_memory.bbt_2_ptr + working_memory.bbt_size;
-		working_memory.geqrf_0_ptr = working_memory.b_2_ptr + working_memory.b_matrix_size;
-	}
+	working_memory.geqrf_0_ptr = working_memory.small_u_ptr + working_memory.small_u_size;
 	working_memory.gesvdj_ptr = working_memory.geqrf_0_ptr;
 	working_memory.orgqr_0_ptr = working_memory.geqrf_0_ptr;
 
@@ -154,6 +150,76 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 	const uint64_t seed = 10;
 	const float alpha = 1.f, beta = 0.f;
 
+	if (get_n_iter()) {
+#ifdef TIME_BREAKDOWN
+		profiler.start_timer_sync("power_iter");
+#endif
+		if (get_m() >= get_n()) {
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_T, CUBLAS_OP_N,
+						get_n(), get_n(), get_m(),
+						&alpha,
+						A_ptr, get_m(),
+						A_ptr, get_m(),
+						&beta,
+						working_memory.X_tmp_ptr[0], get_n()
+						));
+		} else {
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_T,
+						get_m(), get_m(), get_n(),
+						&alpha,
+						A_ptr, get_m(),
+						A_ptr, get_m(),
+						&beta,
+						working_memory.X_tmp_ptr[0], get_m()
+						));
+		}
+		for (unsigned i = 0; i < get_n_iter(); i++) {
+			const auto r = std::min(get_m(), get_n());
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_T,
+						r, r, r,
+						&alpha,
+						working_memory.X_tmp_ptr[i & 0x1], r,
+						working_memory.X_tmp_ptr[i & 0x1], r,
+						&beta,
+						working_memory.X_tmp_ptr[1 - (i & 0x1)], r
+						));
+		}
+		if (get_m() >= get_n()) {
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_N,
+						get_m(), get_n(), get_n(),
+						&alpha,
+						A_ptr, get_m(),
+						working_memory.X_tmp_ptr[1 - (get_n_iter() & 0x1)], get_n(),
+						&beta,
+						working_memory.X_ptr, get_m()
+						));
+		} else {
+			CUTF_CHECK_ERROR(cutf::cublas::gemm(
+						cublas_handle,
+						CUBLAS_OP_N, CUBLAS_OP_N,
+						get_m(), get_n(), get_m(),
+						&alpha,
+						working_memory.X_tmp_ptr[1 - (get_n_iter() & 0x1)], get_m(),
+						A_ptr, get_m(),
+						&beta,
+						working_memory.X_ptr, get_m()
+						));
+		}
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("power_iter");
+#endif
+	} else {
+		working_memory.X_ptr = A_ptr;
+	}
+
 #ifdef TIME_BREAKDOWN
 	profiler.start_timer_sync("gen_rand");
 #endif
@@ -166,7 +232,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 #endif
 	rand_proj.apply(
 				working_memory.y_matrix_ptr, get_m(),
-				A_ptr, get_m()
+				working_memory.X_ptr, get_m()
 			);
 #ifdef TIME_BREAKDOWN
 	profiler.stop_timer_sync("matmul_1");
@@ -207,7 +273,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 					q, get_n(), get_m(),
 					&alpha,
 					working_memory.y_matrix_ptr, get_m(),
-					A_ptr, get_m(),
+					working_memory.X_ptr, get_m(),
 					&beta,
 					working_memory.b_matrix_ptr, q
 					));
@@ -260,7 +326,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 					CUBLAS_OP_T, CUBLAS_OP_N,
 					get_n(), q, get_m(),
 					&alpha,
-					A_ptr, get_m(),
+					working_memory.X_ptr, get_m(),
 					working_memory.y_matrix_ptr, get_m(),
 					&beta,
 					working_memory.b_matrix_ptr, get_n()
@@ -315,8 +381,7 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				S_ptr,
 				working_memory.full_S_ptr,
 				get_k(),
-				0,
-				//get_n_iter(),
+				get_n_iter(),
 				cuda_stream
 				);
 	} else {

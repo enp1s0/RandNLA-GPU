@@ -160,10 +160,9 @@ class rsvd_selfmade : public rsvd_base {
 		float* full_V_ptr;
 		std::size_t full_S_size;
 		float* full_S_ptr;
-		std::size_t bbt_size;
-		float* bbt_1_ptr;
-		float* bbt_2_ptr;
-		float* b_2_ptr;
+		float* X_ptr;
+		float* X_tmp_ptr[2];
+		std::size_t X_tmp_size;
 		int* devInfo_ptr;
 	} working_memory;
 public:
