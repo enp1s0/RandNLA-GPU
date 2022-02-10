@@ -15,7 +15,7 @@ constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 1;
-using svd_t = mtk::rsvd_test::svd_jaccobi;
+using svd_t = mtk::rsvd_test::svd_qr;
 
 namespace {
 void print_csv_header() {
@@ -149,6 +149,7 @@ int main() {
 				
 				svd_t svd(*cusolver_handle.get());
 
+#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
 				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
 						*cusolver_handle.get(),
 						*cusolver_params.get(),
@@ -160,6 +161,7 @@ int main() {
 						*cuda_stream.get()
 						);
 				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
+#endif
 
 				{
 					mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
@@ -237,6 +239,7 @@ int main() {
 #endif
 				}
 
+#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
 				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
 						*cusolver_handle.get(),
 						m, n, decomp_k, p, n_iter,
@@ -247,6 +250,7 @@ int main() {
 						*cuda_stream.get()
 						);
 				evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
+#endif
 			}
 		}
 	}
