@@ -1,15 +1,15 @@
 [submodule "src/cutf"]
-	path = src/cutf
+	path = rsvd/src/cutf
 	url = https://github.com/enp1s0/cutf
 [submodule "src/mateval"]
-	path = src/mateval
+	path = rsvd/src/mateval
 	url = https://github.com/enp1s0/mateval
 [submodule "src/matfile"]
-	path = src/matfile
+	path = rsvd/src/matfile
 	url = https://github.com/enp1s0/matfile
 [submodule "src/shgemm"]
-	path = src/shgemm
+	path = rsvd/src/shgemm
 	url = git@gitlab.momo86.net:mutsuki/shgemm.git
 [submodule "src/curand_fp16"]
-	path = src/curand_fp16
+	path = rsvd/src/curand_fp16
 	url = https://github.com/enp1s0/curand_fp16
