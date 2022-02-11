@@ -8,7 +8,7 @@ namespace mtk {
 namespace rsvd_test {
 class random_projection_base {
 	const std::string name;
-	std::size_t src_m, src_n, target_rank;
+	std::size_t max_src_m, max_src_n, max_target_rank;
 protected:
 	cudaStream_t cuda_stream;
 public:
@@ -18,29 +18,38 @@ public:
 		name(name), cuda_stream(0) {}
 
 	void set_config(
-			const std::size_t i_src_m,
-			const std::size_t i_src_n,
-			const std::size_t i_target_rank,
+			const std::size_t i_max_src_m,
+			const std::size_t i_max_src_n,
+			const std::size_t i_max_target_rank,
 			cudaStream_t const stream = 0
 			) {
-		src_m = i_src_m;
-		src_n = i_src_n;
-		target_rank = i_target_rank;
+		max_src_m = i_max_src_m;
+		max_src_n = i_max_src_n;
+		max_target_rank = i_max_target_rank;
 		cuda_stream = stream;
 	}
 
 	std::string get_name() const {return name;}
-	std::size_t get_src_m() const {return src_m;}
-	std::size_t get_src_n() const {return src_n;}
-	std::size_t get_target_rank() const {return target_rank;}
+	std::size_t get_max_src_m() const {return max_src_m;}
+	std::size_t get_max_src_n() const {return max_src_n;}
+	std::size_t get_max_target_rank() const {return max_target_rank;}
 
 	virtual void allocate_working_memory() = 0;
 	virtual void free_working_memory() = 0;
 	virtual void gen_rand(const std::uint64_t seed) = 0;
 	virtual void apply(
+			const std::size_t m, const std::size_t n, const std::size_t r,
 			float* const dst_ptr, const std::size_t ldd,
 			float* const src_ptr, const std::size_t lds
 			) = 0;
+	void apply(
+			float* const dst_ptr, const std::size_t ldd,
+			float* const src_ptr, const std::size_t lds
+			) {
+		apply(max_src_m, max_src_n, max_target_rank,
+				dst_ptr, ldd,
+				src_ptr, lds);
+	}
 };
 
 class random_projection_fp32 : public random_projection_base {
@@ -56,6 +65,7 @@ public:
 	void free_working_memory();
 	void gen_rand(const std::uint64_t seed);
 	void apply(
+			const std::size_t m, const std::size_t n, const std::size_t r,
 			float* const dst_ptr, const std::size_t ldd,
 			float* const src_ptr, const std::size_t lds
 			);
@@ -74,6 +84,7 @@ public:
 	void free_working_memory();
 	void gen_rand(const std::uint64_t seed);
 	void apply(
+			const std::size_t m, const std::size_t n, const std::size_t r,
 			float* const dst_ptr, const std::size_t ldd,
 			float* const src_ptr, const std::size_t lds
 			);
@@ -94,6 +105,7 @@ public:
 	void free_working_memory();
 	void gen_rand(const std::uint64_t seed);
 	void apply(
+			const std::size_t m, const std::size_t n, const std::size_t r,
 			float* const dst_ptr, const std::size_t ldd,
 			float* const src_ptr, const std::size_t lds
 			);
