@@ -13,3 +13,6 @@
 [submodule "src/curand_fp16"]
 	path = common/src/curand_fp16
 	url = https://github.com/enp1s0/curand_fp16
+[submodule "common/src/cutt"]
+	path = common/src/cutt
+	url = https://github.com/enp1s0/cutt
