@@ -35,7 +35,7 @@ void test_hosvd(
 	// tensor elements initialization
 
 	// accuracy test
-	//hosvd.run();
+	hosvd.run();
 
 	cutf::memory::free_async(A_ptr, cuda_stream);
 	cutf::memory::free_async(S_ptr, cuda_stream);

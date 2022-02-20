@@ -138,6 +138,7 @@ void mtk::rsvd_test::hosvd_rp::clean() {
 }
 
 void mtk::rsvd_test::hosvd_rp::run() {
+	random_projection.gen_rand(100);
 	// Transpose the tensor
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		std::vector<std::string> reshaped_mode_order(input_tensor_mode.size());
@@ -160,7 +161,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		random_projection.apply(
 				input_tensor_mode[i].second, core_tensor_mode[i].second, cutt::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second,
 				Q_ptr[i], input_tensor_mode[i].second,
-				working_memory.ttgt_ptr, core_tensor_mode[i].second
+				working_memory.ttgt_ptr, input_tensor_mode[i].second
 				);
 		// QR
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
