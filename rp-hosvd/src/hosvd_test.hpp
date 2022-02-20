@@ -14,9 +14,9 @@ protected:
 	const cutt::mode_t input_tensor_mode;
 	const cutt::mode_t core_tensor_mode;
 
-	float* const A_ptr;
-	float* const S_ptr;
-	std::vector<float*>& Q_ptr;
+	float* A_ptr;
+	float* S_ptr;
+	std::vector<float*> Q_ptr;
 
 	const std::string name;
 
@@ -30,9 +30,6 @@ public:
 			const std::string name,
 			const cutt::mode_t input_tensor_mode,
 			const cutt::mode_t core_tensor_mode,
-			float* const A_ptr,
-			float* const S_ptr,
-			std::vector<float*>& Q_ptr,
 			cudaStream_t cuda_stream,
 			cusolverDnHandle_t cusolver_handle,
 			cutensorHandle_t cutensor_handle
@@ -40,12 +37,24 @@ public:
 		input_tensor_mode(input_tensor_mode),
 		core_tensor_mode(core_tensor_mode),
 		cuda_stream(cuda_stream),
-		A_ptr(A_ptr), S_ptr(S_ptr), Q_ptr(Q_ptr),
 		profiler(cuda_stream),
 		cusolver_handle(cusolver_handle),
 		cutensor_handle(cutensor_handle)	{}
 
 	std::string get_name_str() const {return std::string("hosvd-") + name;}
+
+	void set_config(
+			float* const i_A_ptr,
+			float* const i_S_ptr,
+			std::vector<float*>& i_Q_ptr
+			) {
+		A_ptr = i_A_ptr;
+		S_ptr = i_S_ptr;
+		Q_ptr = std::vector<float*>{i_Q_ptr.size()};
+		for (unsigned i = 0; i < i_Q_ptr.size(); i++) {
+			Q_ptr[i] = i_Q_ptr[i];
+		}
+	}
 
 	virtual void prepare() = 0;
 	virtual void run() = 0;
@@ -94,16 +103,13 @@ public:
 	hosvd_rp(
 			const cutt::mode_t input_tensor_mode,
 			const cutt::mode_t core_tensor_mode,
-			float* const A_ptr,
-			float* const S_ptr,
-			std::vector<float*>& Q_ptr,
 			mtk::rsvd_test::random_projection_base& random_projection,
 			cudaStream_t cuda_stream,
 			cusolverDnHandle_t cusolver_handle,
 			cutensorHandle_t cutensor_handle
 			) : 
 		random_projection(random_projection),
-		hosvd_base(std::string("rp-") + random_projection.get_name(), input_tensor_mode, core_tensor_mode, A_ptr, S_ptr, Q_ptr, cuda_stream, cusolver_handle, cutensor_handle) {}
+		hosvd_base(std::string("rp-") + random_projection.get_name(), input_tensor_mode, core_tensor_mode, cuda_stream, cusolver_handle, cutensor_handle) {}
 
 	void prepare();
 	void run();
