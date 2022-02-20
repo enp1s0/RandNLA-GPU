@@ -5,6 +5,9 @@
 #include "hosvd_test.hpp"
 
 void mtk::rsvd_test::hosvd_rp::prepare() {
+	working_memory.alloc_ptr = nullptr;
+	contraction_working_mem_ptr = nullptr;
+
 	const std::size_t prod = cutt::utils::get_num_elements(input_tensor_mode);
 	std::size_t max_rand_matrix_m = 0;
 	std::size_t max_rand_matrix_n = 0;
@@ -31,12 +34,14 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	working_memory.ttgt_size = prod;
 
 	// QR
-	Q_tensor_mode.resize(input_tensor_mode.size());
+	Q_tensor_mode.resize                 (input_tensor_mode.size());
+	Q_tensor_desc.resize                 (input_tensor_mode.size());
+	Q_tensor_alignment_requirement.resize(input_tensor_mode.size());
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		Q_tensor_mode[i].push_back(input_tensor_mode[i]);
 		Q_tensor_mode[i].push_back(core_tensor_mode[i]);
 		Q_tensor_desc[i] = cutt::cutensor::get_descriptor<float>(cutensor_handle, Q_tensor_mode[i]);
-		CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, Q_ptr[i - 1], &Q_tensor_desc[i - 1], &Q_tensor_alignment_requirement[i - 1]));
+		CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, Q_ptr[i], &Q_tensor_desc[i], &Q_tensor_alignment_requirement[i]));
 
 		int qr_size_0, qr_size_1;
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf_buffer_size(
@@ -60,6 +65,7 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		working_memory.qr_size  = std::max<std::size_t>(working_memory.qr_size , std::max(qr_size_0, qr_size_1)) + 1;
 	}
 
+
 	// Allocation (1)
 	working_memory.alloc_size = working_memory.ttgt_size + working_memory.qr_size + working_memory.tau_size + 1 /*dev*/;
 
@@ -71,20 +77,20 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	working_memory.dev_ptr  = reinterpret_cast<int*>(working_memory.tau_ptr) + working_memory.tau_size;
 
 	// Resize
-	contraction_desc.resize(input_tensor_mode.size());
+	contraction_desc.resize            (input_tensor_mode.size());
 	contraction_working_mem_size.resize(input_tensor_mode.size());
-	contraction_find.resize(input_tensor_mode.size());
-	contraction_plan.resize(input_tensor_mode.size());
+	contraction_find.resize            (input_tensor_mode.size());
+	contraction_plan.resize            (input_tensor_mode.size());
 	// Tensor contraction
-	tmp_core_tensor_mode.resize(input_tensor_mode.size());
+	tmp_core_tensor_mode.resize                 (input_tensor_mode.size() + 1);
+	tmp_core_tensor_desc.resize                 (input_tensor_mode.size() + 1);
+	tmp_core_tensor_alignment_requirement.resize(input_tensor_mode.size() + 1);
 	tmp_core_tensor_mode[0] = input_tensor_mode;
 	tmp_core_tensor_desc[0] = cutt::cutensor::get_descriptor<float>(cutensor_handle, input_tensor_mode);
-	CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, working_memory.ttgt_ptr, &tmp_core_tensor_desc[0], &tmp_core_tensor_alignment_requirement[0]));
+	CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, A_ptr, &tmp_core_tensor_desc[0], &tmp_core_tensor_alignment_requirement[0]));
 	for (unsigned i = 1; i <= input_tensor_mode.size(); i++) {
 		auto t_mode = tmp_core_tensor_mode[i - 1];
-		for (unsigned j = 0; j < i; j++) {
-			t_mode[j] = core_tensor_mode[j];
-		}
+		t_mode[i - 1] = core_tensor_mode[i - 1];
 		tmp_core_tensor_mode[i] = t_mode;
 
 		float* mem_ptr;
@@ -95,7 +101,7 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		} else {
 			mem_ptr = working_memory.alloc_ptr;
 		}
-		tmp_core_tensor_desc[i] = cutt::cutensor::get_descriptor<float>(cutensor_handle, t_mode);
+		tmp_core_tensor_desc[i] = cutt::cutensor::get_descriptor<float>(cutensor_handle, tmp_core_tensor_mode[i]);
 		CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, mem_ptr, &tmp_core_tensor_desc[i], &tmp_core_tensor_alignment_requirement[i]));
 
 		// Set contraction descriptor
@@ -110,10 +116,10 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		CUTT_CHECK_ERROR(cutensorInitContractionFind(&cutensor_handle, &contraction_find[i - 1], CUTENSOR_ALGO_DEFAULT));
 
 		// calculate working memory size
-		CUTT_CHECK_ERROR(cutensorContractionGetWorkspace(&cutensor_handle, &contraction_desc[i], &contraction_find[i], CUTENSOR_WORKSPACE_RECOMMENDED, &contraction_working_mem_size[i]));
+		CUTT_CHECK_ERROR(cutensorContractionGetWorkspace(&cutensor_handle, &contraction_desc[i - 1], &contraction_find[i - 1], CUTENSOR_WORKSPACE_RECOMMENDED, &contraction_working_mem_size[i - 1]));
 
 		// set plan
-		CUTT_CHECK_ERROR(cutensorInitContractionPlan(&cutensor_handle, &contraction_plan[i], &contraction_desc[i], &contraction_find[i], contraction_working_mem_size[i]));
+		CUTT_CHECK_ERROR(cutensorInitContractionPlan(&cutensor_handle, &contraction_plan[i - 1], &contraction_desc[i - 1], &contraction_find[i - 1], contraction_working_mem_size[i - 1]));
 	}
 	// Calc working memory size
 	contraction_working_mem_size_max = 0;
@@ -125,7 +131,9 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 
 void mtk::rsvd_test::hosvd_rp::clean() {
 	cutf::memory::free_async(working_memory.alloc_ptr, cuda_stream);
+	working_memory.alloc_ptr = nullptr;
 	cutf::memory::free_async(contraction_working_mem_ptr, cuda_stream);
+	contraction_working_mem_ptr = nullptr;
 	random_projection.free_working_memory();
 }
 
