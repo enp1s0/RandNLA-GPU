@@ -1,13 +1,14 @@
 #include <iostream>
+#include <chrono>
 #include <cutf/cutensor.hpp>
 #include <cutf/stream.hpp>
 #include <cutf/memory.hpp>
 #include "hosvd_test.hpp"
 
 constexpr unsigned num_mode = 3;
-constexpr unsigned tensor_dim_log = 10;
+constexpr unsigned tensor_dim_log = 9;
 constexpr unsigned min_rank_log = 3;
-constexpr unsigned max_rank_log = 9;
+constexpr unsigned max_rank_log = 8;
 
 void test_hosvd(
 		const cutt::mode_t& input_tensor_mode,
@@ -29,11 +30,19 @@ void test_hosvd(
 	}
 
 	hosvd.set_config(A_ptr, S_ptr, Q_ptrs);
+	hosvd.prepare();
 
 	// tensor elements initialization
 
 	// accuracy test
-	hosvd.run();
+	//hosvd.run();
+
+	cutf::memory::free_async(A_ptr, cuda_stream);
+	cutf::memory::free_async(S_ptr, cuda_stream);
+	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
+		cutf::memory::free_async(Q_ptrs[i], cuda_stream);
+	}
+	hosvd.clean();
 }
 
 int main() {
@@ -53,11 +62,11 @@ int main() {
 		cutt::mode_t core_tensor_mode;
 		for (unsigned i = 0; i < num_mode; i++) {
 			cutt::utils::insert_mode(input_tensor_mode, "m-" + std::to_string(i), dim);
-			cutt::utils::insert_mode(input_tensor_mode, "c-" + std::to_string(i), rank);
+			cutt::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
 		}
 
 		mtk::rsvd_test::random_projection_fp32 rp_fp32(*cublas_handle_uptr.get());
-		mtk::rsvd_test::hosvd_rp(
+		mtk::rsvd_test::hosvd_rp hosvd(
 				input_tensor_mode,
 				core_tensor_mode,
 				rp_fp32,
@@ -65,5 +74,12 @@ int main() {
 				*cusolver_handle_uptr.get(),
 				cutensor_handle
 				);
+		test_hosvd(
+				input_tensor_mode,
+				core_tensor_mode,
+				hosvd,
+				*cuda_stream_uptr.get()
+				);
 	}
+	mtk::shgemm::destroy(shgemm_handle);
 }
