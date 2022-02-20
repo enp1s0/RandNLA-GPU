@@ -29,7 +29,7 @@ void mtk::rsvd_test::random_projection_fp32::apply(
 }
 
 void mtk::rsvd_test::random_projection_fp32::allocate_working_memory() {
-	rand_matrix_ptr = cutf::memory::malloc_async<float>(get_max_src_m() * get_max_target_rank(), cuda_stream);
+	rand_matrix_ptr = cutf::memory::malloc_async<float>(get_max_src_n() * get_max_target_rank(), cuda_stream);
 }
 
 void mtk::rsvd_test::random_projection_fp32::free_working_memory() {
