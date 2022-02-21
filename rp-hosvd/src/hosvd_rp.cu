@@ -26,7 +26,8 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	}
 
 	random_projection.set_config(
-			input_tensor_mode[max_rand_matrix_index].second, max_rand_matrix_m, max_rand_matrix_n
+			input_tensor_mode[max_rand_matrix_index].second, max_rand_matrix_m, max_rand_matrix_n,
+			cuda_stream
 			);
 	random_projection.allocate_working_memory();
 
@@ -146,7 +147,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		reshaped_mode_order[0] = target_mode_name;
 		for (unsigned j = 0, k = 1; j < input_tensor_mode.size(); j++) {
 			if (i != j) {
-				reshaped_mode_order[k++] = input_tensor_mode[i].first;
+				reshaped_mode_order[k++] = input_tensor_mode[j].first;
 			}
 		}
 		// Transpose
