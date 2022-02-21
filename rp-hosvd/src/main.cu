@@ -8,7 +8,8 @@
 constexpr unsigned num_mode = 3;
 constexpr unsigned tensor_dim_log = 9;
 constexpr unsigned min_rank_log = 3;
-constexpr unsigned max_rank_log = 8;
+constexpr unsigned max_rank_log = tensor_dim_log - 1;
+constexpr unsigned num_throughput_test = 1u << 4;
 
 void test_hosvd(
 		const cutt::mode_t& input_tensor_mode,
@@ -30,19 +31,50 @@ void test_hosvd(
 	}
 
 	hosvd.set_config(A_ptr, S_ptr, Q_ptrs);
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 	hosvd.prepare();
 
 	// tensor elements initialization
 
 	// accuracy test
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 	hosvd.run();
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 
+	// throughput test
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+	const auto start_clock = std::chrono::system_clock::now();
+	for (unsigned i = 0; i < num_throughput_test; i++)
+		hosvd.run();
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+	const auto end_clock = std::chrono::system_clock::now();
+	const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6 / num_throughput_test;
+
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 	cutf::memory::free_async(A_ptr, cuda_stream);
 	cutf::memory::free_async(S_ptr, cuda_stream);
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		cutf::memory::free_async(Q_ptrs[i], cuda_stream);
 	}
 	hosvd.clean();
+
+	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+	// Output result
+	std::printf("%s,", hosvd.get_name_str().c_str());
+	std::printf("(");
+	for (const auto i : input_tensor_mode) {
+		std::printf("%lu-", i.second);
+	}
+	std::printf("),");
+	std::fflush(stdout);
+	std::printf("(");
+	for (const auto i : core_tensor_mode) {
+		std::printf("%lu-", i.second);
+	}
+	std::printf("),");
+
+	std::printf("%e,", elapsed_time);
+	std::printf("\n");
 }
 
 int main() {
@@ -65,21 +97,23 @@ int main() {
 			cutt::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
 		}
 
-		mtk::rsvd_test::random_projection_fp32 rp_fp32(*cublas_handle_uptr.get());
-		mtk::rsvd_test::hosvd_rp hosvd(
-				input_tensor_mode,
-				core_tensor_mode,
-				rp_fp32,
-				*cuda_stream_uptr.get(),
-				*cusolver_handle_uptr.get(),
-				cutensor_handle
-				);
-		test_hosvd(
-				input_tensor_mode,
-				core_tensor_mode,
-				hosvd,
-				*cuda_stream_uptr.get()
-				);
+		{
+			mtk::rsvd_test::random_projection_fp32 rp(*cublas_handle_uptr.get());
+			mtk::rsvd_test::hosvd_rp hosvd(
+					input_tensor_mode,
+					core_tensor_mode,
+					rp,
+					*cuda_stream_uptr.get(),
+					*cusolver_handle_uptr.get(),
+					cutensor_handle
+					);
+			test_hosvd(
+					input_tensor_mode,
+					core_tensor_mode,
+					hosvd,
+					*cuda_stream_uptr.get()
+					);
+		}
 	}
 	mtk::shgemm::destroy(shgemm_handle);
 }
