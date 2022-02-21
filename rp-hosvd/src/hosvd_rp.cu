@@ -38,6 +38,8 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	Q_tensor_mode.resize                 (input_tensor_mode.size());
 	Q_tensor_desc.resize                 (input_tensor_mode.size());
 	Q_tensor_alignment_requirement.resize(input_tensor_mode.size());
+	working_memory.tau_size = 0;
+	working_memory.qr_size  = 0;
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		Q_tensor_mode[i].push_back(input_tensor_mode[i]);
 		Q_tensor_mode[i].push_back(core_tensor_mode[i]);
