@@ -19,11 +19,11 @@ void mtk::rsvd_test::random_projection_shgemm::apply(
 	const float alpha = 1.0f, beta = 0.0f;
 	mtk::shgemm::shgemm(
 				shgemm_handle,
-				mtk::shgemm::op_n, mtk::shgemm::op_t,
+				mtk::shgemm::op_n, mtk::shgemm::op_n,
 				m, r, n,
 				&alpha,
 				src_ptr, lds,
-				rand_matrix_ptr, r,
+				rand_matrix_ptr, n,
 				&beta,
 				dst_ptr, ldd
 				);
