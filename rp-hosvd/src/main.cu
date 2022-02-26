@@ -119,6 +119,23 @@ int main() {
 					*cuda_stream_uptr.get()
 					);
 		}
+		{
+			mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle);
+			mtk::rsvd_test::hosvd_rp hosvd(
+					input_tensor_mode,
+					core_tensor_mode,
+					rp,
+					*cuda_stream_uptr.get(),
+					*cusolver_handle_uptr.get(),
+					cutensor_handle
+					);
+			test_hosvd(
+					input_tensor_mode,
+					core_tensor_mode,
+					hosvd,
+					*cuda_stream_uptr.get()
+					);
+		}
 	}
 	mtk::shgemm::destroy(shgemm_handle);
 }
