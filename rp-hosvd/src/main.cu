@@ -81,10 +81,15 @@ int main() {
 	auto cusolver_handle_uptr = cutf::cusolver::dn::get_handle_unique_ptr();
 	auto cublas_handle_uptr   = cutf::cublas::get_cublas_unique_ptr();
 	auto cuda_stream_uptr = cutf::stream::get_stream_unique_ptr();
+	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle_uptr.get(), *cuda_stream_uptr.get()));
+	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle_uptr.get(), *cuda_stream_uptr.get()));
+
 	cutensorHandle_t cutensor_handle;
 	CUTF_HANDLE_ERROR(cutensorInit(&cutensor_handle));
+
 	mtk::shgemm::shgemmHandle_t shgemm_handle;
 	mtk::shgemm::create(shgemm_handle);
+	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream_uptr.get());
 
 	for (unsigned rank_log = min_rank_log; rank_log <= max_rank_log; rank_log++) {
 		const auto rank = 1u << rank_log;
