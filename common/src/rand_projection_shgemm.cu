@@ -19,7 +19,7 @@ void mtk::rsvd_test::random_projection_shgemm::apply(
 	const float alpha = 1.0f, beta = 0.0f;
 	mtk::shgemm::shgemm(
 				shgemm_handle,
-				mtk::shgemm::op_n, mtk::shgemm::op_n,
+				mtk::shgemm::op_n, mtk::shgemm::op_t,
 				m, r, n,
 				&alpha,
 				src_ptr, lds,
