@@ -6,8 +6,8 @@
 #include "hosvd_test.hpp"
 
 constexpr unsigned num_mode = 3;
-constexpr unsigned tensor_dim_log = 9;
-constexpr unsigned min_rank_log = 3;
+constexpr unsigned tensor_dim_log = 10;
+constexpr unsigned min_rank_log = 6;
 constexpr unsigned max_rank_log = tensor_dim_log - 1;
 constexpr unsigned num_throughput_test = 1u << 4;
 
