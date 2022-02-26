@@ -163,7 +163,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 				);
 		// Rand projection
 		random_projection.apply(
-				input_tensor_mode[i].second, core_tensor_mode[i].second, cutt::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second,
+				input_tensor_mode[i].second, cutt::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second, core_tensor_mode[i].second,
 				Q_ptr[i], input_tensor_mode[i].second,
 				working_memory.ttgt_ptr, input_tensor_mode[i].second
 				);
