@@ -130,6 +130,8 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		contraction_working_mem_size_max = std::max(contraction_working_mem_size_max, contraction_working_mem_size[i]);
 	}
 	contraction_working_mem_ptr = cutf::memory::malloc_async<uint8_t>(contraction_working_mem_size_max, cuda_stream);
+
+	random_projection.gen_rand(100);
 }
 
 void mtk::rsvd_test::hosvd_rp::clean() {
@@ -141,7 +143,6 @@ void mtk::rsvd_test::hosvd_rp::clean() {
 }
 
 void mtk::rsvd_test::hosvd_rp::run() {
-	random_projection.gen_rand(100);
 	// Transpose the tensor
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		std::vector<std::string> reshaped_mode_order(input_tensor_mode.size());
