@@ -118,6 +118,14 @@ int main() {
 					hosvd,
 					*cuda_stream_uptr.get()
 					);
+#ifdef TIME_BREAKDOWN
+			std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+			hosvd.print_time_breakdown();
+			std::printf("# END human\n");
+			std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+			hosvd.print_time_breakdown(true);
+			std::printf("# END csv\n");
+#endif
 		}
 		{
 			mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle);
@@ -135,6 +143,14 @@ int main() {
 					hosvd,
 					*cuda_stream_uptr.get()
 					);
+#ifdef TIME_BREAKDOWN
+			std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+			hosvd.print_time_breakdown();
+			std::printf("# END human\n");
+			std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+			hosvd.print_time_breakdown(true);
+			std::printf("# END csv\n");
+#endif
 		}
 	}
 	mtk::shgemm::destroy(shgemm_handle);

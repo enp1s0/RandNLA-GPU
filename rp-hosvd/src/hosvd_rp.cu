@@ -4,6 +4,14 @@
 #include <cuda_common.hpp>
 #include "hosvd_test.hpp"
 
+#ifdef TIME_BREAKDOWN
+#define CUTF_PROFILE_START_TIMER(name) CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));profiler.start_timer_sync(name)
+#define CUTF_PROFILE_STOP_TIMER(name)  CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));profiler.stop_timer_sync(name)
+#else
+#define CUTF_PROFILE_START_TIMER(name)
+#define CUTF_PROFILE_STOP_TIMER(name)
+#endif
+
 void mtk::rsvd_test::hosvd_rp::prepare() {
 	working_memory.alloc_ptr = nullptr;
 	contraction_working_mem_ptr = nullptr;
@@ -154,6 +162,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 			}
 		}
 		// Transpose
+		CUTF_PROFILE_START_TIMER("reshape");
 		cutt::reshape(
 				working_memory.ttgt_ptr,
 				A_ptr,
@@ -161,12 +170,16 @@ void mtk::rsvd_test::hosvd_rp::run() {
 				reshaped_mode_order,
 				cuda_stream
 				);
+		CUTF_PROFILE_STOP_TIMER("reshape");
+		CUTF_PROFILE_START_TIMER("random_projection");
 		// Rand projection
 		random_projection.apply(
 				input_tensor_mode[i].second, cutt::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second, core_tensor_mode[i].second,
 				Q_ptr[i], input_tensor_mode[i].second,
 				working_memory.ttgt_ptr, input_tensor_mode[i].second
 				);
+		CUTF_PROFILE_STOP_TIMER("random_projection");
+		CUTF_PROFILE_START_TIMER("qr");
 		// QR
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 					cusolver_handle,
@@ -187,6 +200,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 					working_memory.orgqr_size[i],
 					working_memory.dev_ptr
 					));
+		CUTF_PROFILE_STOP_TIMER("qr");
 	}
 	// Compute the core tensor
 	const float alpha = 1.f;
@@ -206,11 +220,13 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		} else {
 			output_ptr = A_ptr;
 		}
+		CUTF_PROFILE_START_TIMER("tensor_contraction");
 		CUTT_CHECK_ERROR(cutensorContraction(&cutensor_handle,
 				&contraction_plan[i],
 				reinterpret_cast<const void*>(&alpha), input_ptr, Q_ptr[i],
 				reinterpret_cast<const void*>(&beta), output_ptr, output_ptr,
 				contraction_working_mem_ptr, contraction_working_mem_size[i], 0
 				));
+		CUTF_PROFILE_STOP_TIMER("tensor_contraction");
 	}
 }
