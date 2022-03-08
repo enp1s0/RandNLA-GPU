@@ -231,5 +231,6 @@ public:
 	void run();
 	void clean();
 };
+} // namespace rsvd_test
 } // namespace mtk
 #endif
