@@ -214,7 +214,32 @@ int main() {
 #endif
 				}
 				{
-					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle);
+					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::tf32);
+					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+							*cublas_handle.get(),
+							*cusolver_handle.get(),
+							*cusolver_params.get(),
+							m, n, decomp_k, p, n_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get(),
+							svd,
+							rand_proj_shgemm
+							);
+					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+#ifdef TIME_BREAKDOWN
+					std::printf("# START human time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_shgemm.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown();
+					std::printf("# END human\n");
+					std::printf("# START csv time-breakdown-%s-%u-%u-%u-%u-%s\n", matrix_name.c_str(), m, n, decomp_k, p, rand_proj_shgemm.get_name().c_str());
+					rsvd_selfmade.print_time_breakdown(true);
+					std::printf("# END csv\n");
+#endif
+				}
+				{
+					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::fp16);
 					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
 							*cublas_handle.get(),
 							*cusolver_handle.get(),

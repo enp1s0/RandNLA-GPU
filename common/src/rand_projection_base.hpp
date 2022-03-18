@@ -96,10 +96,11 @@ class random_projection_shgemm : public random_projection_base {
 	half* rand_matrix_ptr;
 
 	mtk::shgemm::shgemmHandle_t& shgemm_handle;
+	const mtk::shgemm::tc_t compute_type;
 public:
 	random_projection_shgemm(
-			mtk::shgemm::shgemmHandle_t& shgemm_handle
-			) : random_projection_base("rndprj_shgemm"), shgemm_handle(shgemm_handle) {}
+			mtk::shgemm::shgemmHandle_t& shgemm_handle, const mtk::shgemm::tc_t compute_type
+			) : random_projection_base(std::string("rndprj_shgemm-") + (compute_type == mtk::shgemm::fp16 ? "fp16" : "tf32")), shgemm_handle(shgemm_handle), compute_type(compute_type) {}
 
 	void allocate_working_memory();
 	void free_working_memory();

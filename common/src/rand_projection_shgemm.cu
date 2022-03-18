@@ -25,7 +25,8 @@ void mtk::rsvd_test::random_projection_shgemm::apply(
 				src_ptr, lds,
 				rand_matrix_ptr, n,
 				&beta,
-				dst_ptr, ldd
+				dst_ptr, ldd,
+				compute_type
 				);
 }
 
