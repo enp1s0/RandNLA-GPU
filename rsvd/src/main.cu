@@ -11,6 +11,7 @@
 #include <cutf/curand.hpp>
 #include <mateval/comparison_cuda.hpp>
 #include <matfile/matfile.hpp>
+#include <fphistogram/fphistogram.hpp>
 
 constexpr unsigned min_log_m = 9;
 constexpr unsigned max_log_m = 10;
@@ -311,6 +312,7 @@ void watermark_core(
 		) {
 	rsvd.prepare();
 	rsvd.run();
+	cudaDeviceSynchronize();
 
 	const auto m = rsvd.get_m();
 	const auto n = rsvd.get_n();
@@ -319,6 +321,10 @@ void watermark_core(
 	mtk::matfile::save_dense(decomp_k, 1, s_ptr, decomp_k, output_dir + "/" + base_name + "." + rsvd.get_name() + ".s.matrix");
 	mtk::matfile::save_dense(m, decomp_k, u_ptr, m,        output_dir + "/" + base_name + "." + rsvd.get_name() + ".u.matrix");
 	mtk::matfile::save_dense(n, decomp_k, v_ptr, n,        output_dir + "/" + base_name + "." + rsvd.get_name() + ".v.matrix");
+
+	std::printf("[%s] Largest sv = %e\n", rsvd.get_name().c_str(), s_ptr[0]);
+
+	rsvd.clean();
 }
 
 void watermark(
@@ -357,6 +363,7 @@ void watermark(
 		mtk::matfile::load_size(h, w, file_name);
 		std::printf("file_name = %s\n", file_name.c_str());
 		std::printf("image_matrix = (%lu x %lu)\n", w, h);
+		std::fflush(stdout);
 
 		const auto tmp_str_list = str_split(file_name, '.');
 		for (const auto& s : tmp_str_list) std::printf("%s ", s.c_str());
@@ -365,17 +372,20 @@ void watermark(
 		const auto tmp_str_list_base = str_split(tmp_str_list[0] + '.' + tmp_str_list[1], '/');
 		const auto base_name = tmp_str_list_base[tmp_str_list_base.size() - 1];
 		std::printf("base_name = %s\n", base_name.c_str());
+		std::fflush(stdout);
 
 
 		const auto m = h;
 		const auto n = w;
-		const auto p = 10lu;
+		const auto p = 100lu;
 		const auto decomp_k = std::stoul(tmp_str_list[tmp_str_list.size() - 2]);
 
 		std::printf("input=(%lu, %lu), k = %lu, p = %lu\n", m, n, decomp_k, p);
+		std::fflush(stdout);
 
-		// load
 		mtk::matfile::load_dense(image_matrix_uptr.get(), h, file_name);
+		mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(image_matrix_uptr.get(), max_image_height * max_image_width);
+		printf("(2,1) = [[%e], [%e]]\n", image_matrix_uptr.get()[0], image_matrix_uptr.get()[1]);
 
 		// RSVD
 		{
@@ -393,6 +403,8 @@ void watermark(
 					svd,
 					rand_proj
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 		{
@@ -410,6 +422,8 @@ void watermark(
 					svd,
 					rand_proj
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 		{
@@ -427,6 +441,8 @@ void watermark(
 					svd,
 					rand_proj
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 		{
@@ -444,6 +460,8 @@ void watermark(
 					svd,
 					rand_proj
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 		{
@@ -457,6 +475,8 @@ void watermark(
 					v_uptr.get(), n,
 					*cuda_stream.get()
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 		{
@@ -469,6 +489,8 @@ void watermark(
 					v_uptr.get(), n,
 					*cuda_stream.get()
 					);
+
+			// load
 			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
 		}
 	}
@@ -477,7 +499,7 @@ void watermark(
 
 int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
-		watermark(argv[2], argv[3], 3840, 2160);
+		watermark(argv[2], argv[3], 4032, 4032);
 	} else {
 		standard_test();
 	}

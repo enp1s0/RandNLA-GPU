@@ -28,6 +28,7 @@ CXXFLAGS+=-std=c++14 -O3 -I./$(SRCDIR) -I$(COMMON_SRCDIR)
 CXXFLAGS+=-I$(COMMON_SRCDIR)/cutf/include
 CXXFLAGS+=-I$(COMMON_SRCDIR)/mateval/include -L$(COMMON_SRCDIR)/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I$(COMMON_SRCDIR)/matfile/include
+CXXFLAGS+=-I$(COMMON_SRCDIR)/fphistogram/include
 
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
 NVCCFLAGS+=-gencode arch=compute_80,code=sm_80
