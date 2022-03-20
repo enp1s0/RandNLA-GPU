@@ -15,6 +15,7 @@ constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 1;
+constexpr unsigned additional_num_tests_for_time_breakdown = 100;
 using svd_t = mtk::rsvd_test::svd_qr;
 
 namespace {
@@ -96,6 +97,11 @@ void evaluate(
 					V_ptr, rsvd.get_n()
 					);
 			CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+#ifdef TIME_BREAKDOWN
+			for (unsigned i = 0; i < additional_num_tests_for_time_breakdown; i++) {
+				rsvd.run();
+			}
+#endif
 
 		} catch (const std::exception& e) {
 			std::printf("%s\n", e.what());
