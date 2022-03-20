@@ -122,9 +122,8 @@ void evaluate(
 	cutf::memory::free_host<float>(hA_ptr);
 	std::printf("%u\n", n_tests);
 }
-} // noname namespace
 
-int main() {
+void standard_test() {
 	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
 	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
 	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
@@ -286,4 +285,9 @@ int main() {
 		}
 	}
 	mtk::shgemm::destroy(shgemm_handle);
+}
+} // noname namespace
+
+int main() {
+	standard_test();
 }
