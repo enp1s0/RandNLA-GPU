@@ -373,11 +373,11 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 		profiler.stop_timer_sync("matmul_copy");
 #endif
 	}
+	if (get_n_iter()) {
 #ifdef TIME_BREAKDOWN
-	profiler.start_timer_sync("adjust_s");
+		profiler.start_timer_sync("adjust_s");
 #endif
 	// Fix singular values
-	if (get_n_iter()) {
 		power_iteration_singular_value_root(
 				S_ptr,
 				working_memory.full_S_ptr,
@@ -385,17 +385,23 @@ void mtk::rsvd_test::rsvd_selfmade::run() {
 				get_n_iter(),
 				cuda_stream
 				);
+#ifdef TIME_BREAKDOWN
+		profiler.stop_timer_sync("adjust_s");
+#endif
 	} else {
+#ifdef TIME_BREAKDOWN
+		profiler.start_timer_sync("copy_s");
+#endif
 		mtk::rsvd_test::copy_matrix(
 				get_k(), 1,
 				S_ptr, get_k(),
 				working_memory.full_S_ptr, q,
 				cuda_stream
 				);
-	}
 #ifdef TIME_BREAKDOWN
-		profiler.stop_timer_sync("adjust_s");
+		profiler.stop_timer_sync("copy_s");
 #endif
+	}
 }
 
 void mtk::rsvd_test::rsvd_selfmade::clean() {
