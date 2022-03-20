@@ -1,5 +1,4 @@
-#include <rsvd_test.hpp>
-
+#include "cuda_common.hpp"
 namespace {
 __global__ void copy_kernel(
 		const std::size_t m, const std::size_t n,

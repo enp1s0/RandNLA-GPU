@@ -7,11 +7,12 @@ void mtk::rsvd_test::random_projection_shgemm::gen_rand(const std::uint64_t seed
 	mtk::curand_fp16::create(gen, CURAND_RNG_PSEUDO_PHILOX4_32_10);
 	mtk::curand_fp16::set_seed(gen, seed);
 	mtk::curand_fp16::set_cuda_stream(gen, cuda_stream);
-	mtk::curand_fp16::uniform(gen, rand_matrix_ptr, get_src_n() * get_target_rank());
+	mtk::curand_fp16::uniform(gen, rand_matrix_ptr, get_max_src_n() * get_max_target_rank());
 	mtk::curand_fp16::destroy(gen);
 }
 
 void mtk::rsvd_test::random_projection_shgemm::apply(
+		const std::size_t m, const std::size_t n, const std::size_t r,
 		float* const dst_ptr, const std::size_t ldd,
 		float* const src_ptr, const std::size_t lds
 		) {
@@ -19,17 +20,18 @@ void mtk::rsvd_test::random_projection_shgemm::apply(
 	mtk::shgemm::shgemm(
 				shgemm_handle,
 				mtk::shgemm::op_n, mtk::shgemm::op_n,
-				get_src_m(), get_target_rank(), get_src_n(),
+				m, r, n,
 				&alpha,
 				src_ptr, lds,
-				rand_matrix_ptr, get_target_rank(),
+				rand_matrix_ptr, n,
 				&beta,
-				dst_ptr, ldd
+				dst_ptr, ldd,
+				compute_type
 				);
 }
 
 void mtk::rsvd_test::random_projection_shgemm::allocate_working_memory() {
-	rand_matrix_ptr = cutf::memory::malloc_async<half>(get_src_n() * get_target_rank(), cuda_stream);
+	rand_matrix_ptr = cutf::memory::malloc_async<half>(get_max_src_n() * get_max_target_rank(), cuda_stream);
 }
 
 void mtk::rsvd_test::random_projection_shgemm::free_working_memory() {

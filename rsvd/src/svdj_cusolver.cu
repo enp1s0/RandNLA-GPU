@@ -1,4 +1,5 @@
 #include <rsvd_test.hpp>
+#include <cuda_common.hpp>
 #include <cutf/type.hpp>
 
 void mtk::rsvd_test::svdj_cusolver::prepare() {

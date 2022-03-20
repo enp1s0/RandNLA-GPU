@@ -1,10 +1,10 @@
 CXX=g++
-CXXFLAGS=
+CXXFLAGS=-lcutensor
 CXXFLAGS+=-ltmglib -llapacke -llapack -lblas -lgfortran
 #CXXFLAGS+=-DTIME_BREAKDOWN
 #CXXFLAGS+=-DCUTF_DISABLE_MALLOC_ASYNC
 #CXXFLAGS+=-DFP16_EMULATION
-#CXXFLAGS+=-DRUN_REFERENCE_FUNCTIONS
+CXXFLAGS+=-DRUN_REFERENCE_FUNCTIONS
 OMPFLAGS=-fopenmp
 NVCC=nvcc
 
@@ -26,20 +26,21 @@ COMMON_HEADERS=$(shell find $(COMMON_SRCDIR) -name '*.cuh' -o -name '*.hpp' -o -
 
 CXXFLAGS+=-std=c++14 -O3 -I./$(SRCDIR) -I$(COMMON_SRCDIR)
 CXXFLAGS+=-I$(COMMON_SRCDIR)/cutf/include
+CXXFLAGS+=-I$(COMMON_SRCDIR)/cutt/include -L$(COMMON_SRCDIR)/cutt/build/ -lcutt
 CXXFLAGS+=-I$(COMMON_SRCDIR)/mateval/include -L$(COMMON_SRCDIR)/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I$(COMMON_SRCDIR)/matfile/include
+CXXFLAGS+=-I$(COMMON_SRCDIR)/shgemm/include -L$(COMMON_SRCDIR)/shgemm/build -lshgemm
+CXXFLAGS+=-I$(COMMON_SRCDIR)/curand_fp16/include -L$(COMMON_SRCDIR)/curand_fp16/build -lcurand_fp16
 
 NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
 NVCCFLAGS+=-gencode arch=compute_80,code=sm_80
 NVCCFLAGS+=-gencode arch=compute_86,code=sm_86
 NVCCFLAGS+=-lcublas -lcusolver -rdc=true -lcurand
-NVCCFLAGS+=-I$(COMMON_SRCDIR)/shgemm/include -L$(COMMON_SRCDIR)/shgemm/build -lshgemm
-NVCCFLAGS+=-I$(COMMON_SRCDIR)/curand_fp16/include -L$(COMMON_SRCDIR)/curand_fp16/build -lcurand_fp16
 
 OBJS+=$(COMMON_OBJS)
 HEADERS+=$(COMMON_HEADERS)
 
-TARGET=rsvd.test
+TARGET=rp-hosvd.test
 
 $(TARGET): $(OBJS)
 	$(NVCC) $(NVCCFLAGS) $+ -o $@
