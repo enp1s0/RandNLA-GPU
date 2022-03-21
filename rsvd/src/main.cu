@@ -18,7 +18,7 @@ constexpr unsigned max_log_m = 10;
 constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
-constexpr unsigned n_iter = 1;
+constexpr unsigned n_iter = 0;
 constexpr unsigned additional_num_tests_for_time_breakdown = 100;
 using svd_t = mtk::rsvd_test::svd_qr;
 
