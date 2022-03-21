@@ -19,7 +19,7 @@ constexpr unsigned min_log_n = 9;
 constexpr unsigned max_log_n = 10;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 0;
-constexpr unsigned additional_num_tests_for_time_breakdown = 100;
+constexpr unsigned additional_num_tests_for_time_breakdown = 20;
 using svd_t = mtk::rsvd_test::svd_qr;
 
 namespace {
@@ -84,6 +84,7 @@ void evaluate(
 		CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 
 		try {
+			rsvd.disable_breakdown_measurement();
 			cudaStreamSynchronize(cuda_stream);
 			const auto start_clock = std::chrono::system_clock::now();
 			rsvd.run();
@@ -112,6 +113,7 @@ void evaluate(
 					V_ptr, rsvd.get_n()
 					);
 			CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
+			rsvd.enable_breakdown_measurement();
 #ifdef TIME_BREAKDOWN
 			for (unsigned i = 0; i < additional_num_tests_for_time_breakdown; i++) {
 				rsvd.run();
@@ -153,9 +155,11 @@ void standard_test() {
 
 	print_csv_header();
 	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
-		for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
+		//for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
+		{
+			const auto log_n = log_m;
 			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned log_k = std::min(min_log_m, min_log_n) - 1; log_k <= max_log_k - 1; log_k++) {
+			for (unsigned log_k = 6; log_k <= max_log_k - 4; log_k++) {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
