@@ -369,7 +369,7 @@ void watermark(
 		for (const auto& s : tmp_str_list) std::printf("%s ", s.c_str());
 		std::printf("\n");
 		std::printf("%s\n", tmp_str_list[0].c_str());
-		const auto tmp_str_list_base = str_split(tmp_str_list[0] + '.' + tmp_str_list[1], '/');
+		const auto tmp_str_list_base = str_split(tmp_str_list[tmp_str_list.size() - 4] + '.' + tmp_str_list[tmp_str_list.size() - 3], '/');
 		const auto base_name = tmp_str_list_base[tmp_str_list_base.size() - 1];
 		std::printf("base_name = %s\n", base_name.c_str());
 		std::fflush(stdout);
