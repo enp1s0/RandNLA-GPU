@@ -140,7 +140,7 @@ void evaluate(
 	std::printf("%u\n", n_tests);
 }
 
-void standard_test() {
+void breakdown_eval() {
 	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
 	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
 	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
@@ -505,6 +505,6 @@ int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
 	} else {
-		standard_test();
+		breakdown_eval();
 	}
 }
