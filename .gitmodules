@@ -16,3 +16,6 @@
 [submodule "common/src/cutt"]
 	path = common/src/cutt
 	url = https://github.com/enp1s0/cutt
+[submodule "common/src/fphistogram"]
+	path = common/src/fphistogram
+	url = https://github.com/enp1s0/fphistogram
