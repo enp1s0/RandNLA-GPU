@@ -96,6 +96,9 @@ public:
 			profiler.print_result();
 		}
 	}
+	void enable_breakdown_measurement() {profiler.enable_measurement();}
+	void disable_breakdown_measurement() {profiler.disable_measurement();}
+
 };
 
 class rsvd_cusolver : public rsvd_base {
