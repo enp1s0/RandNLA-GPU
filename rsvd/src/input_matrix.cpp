@@ -84,6 +84,17 @@ void mtk::rsvd_test::get_input_matrix(
 			seed
 			);
 		generated = true;
+	} else if (matrix_name_base == "latms_sigmoid") {
+		const auto p_str = input_matrix_name.substr(input_matrix_name.find_first_of("-", 0) + 1);
+		const auto p = std::stoul(p_str);
+
+		mtk::rsvd_test::gen_latms_sigmoid_matrix(
+			ptr, m,
+			m, n,
+			p,
+			seed
+			);
+		generated = true;
 	}
 	const auto end_clock = std::chrono::system_clock::now();
 	const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;

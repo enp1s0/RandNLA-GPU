@@ -40,3 +40,39 @@ void mtk::rsvd_test::gen_latms_matrix(
 		ld
 		);
 }
+
+void mtk::rsvd_test::gen_latms_sigmoid_matrix(
+		float* const ptr,
+		const std::size_t ld,
+		const std::size_t m,
+		const std::size_t n,
+		const std::size_t p,
+		const std::uint64_t seed
+		) {
+	int iseed[4] = {0, 1, 2, static_cast<int>(seed)};
+
+	const auto s_vec_len = std::min(m, n);
+	std::vector<float> s_vec(s_vec_len);
+
+	std::size_t i;
+	for (i = 0; i < std::min(m, n); i++) {
+		s_vec[i] = 1 - 1. / (1. + std::exp(-(i - p)));
+	}
+
+	LAPACKE_slatms(
+		LAPACK_COL_MAJOR,
+		m, n,
+		'S',
+		iseed,
+		'N',
+		s_vec.data(),
+		0,
+		0,
+		0,
+		m - 1,
+		n - 1,
+		'N',
+		ptr,
+		ld
+		);
+}
