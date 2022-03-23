@@ -6,9 +6,9 @@
 #include "hosvd_test.hpp"
 
 constexpr unsigned num_mode = 3;
-constexpr unsigned tensor_dim_log = 10;
+constexpr unsigned min_tensor_dim_log = 9;
+constexpr unsigned max_tensor_dim_log = 10;
 constexpr unsigned min_rank_log = 6;
-constexpr unsigned max_rank_log = tensor_dim_log - 1;
 constexpr unsigned num_throughput_test = 1u << 4;
 
 void test_hosvd(
@@ -91,66 +91,69 @@ int main() {
 	mtk::shgemm::create(shgemm_handle);
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream_uptr.get());
 
-	for (unsigned rank_log = min_rank_log; rank_log <= max_rank_log; rank_log++) {
-		const auto rank = 1u << rank_log;
-		const auto dim = 1u << tensor_dim_log;
+	for (unsigned tensor_dim_log = min_tensor_dim_log; tensor_dim_log <= max_tensor_dim_log; tensor_dim_log++) {
+		const unsigned max_rank_log = tensor_dim_log - 1;
+		for (unsigned rank_log = min_rank_log; rank_log <= max_rank_log; rank_log++) {
+			const auto rank = 1u << rank_log;
+			const auto dim = 1u << tensor_dim_log;
 
-		cutt::mode_t input_tensor_mode;
-		cutt::mode_t core_tensor_mode;
-		for (unsigned i = 0; i < num_mode; i++) {
-			cutt::utils::insert_mode(input_tensor_mode, "m-" + std::to_string(i), dim);
-			cutt::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
-		}
+			cutt::mode_t input_tensor_mode;
+			cutt::mode_t core_tensor_mode;
+			for (unsigned i = 0; i < num_mode; i++) {
+				cutt::utils::insert_mode(input_tensor_mode, "m-" + std::to_string(i), dim);
+				cutt::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
+			}
 
-		{
-			mtk::rsvd_test::random_projection_fp32 rp(*cublas_handle_uptr.get());
-			mtk::rsvd_test::hosvd_rp hosvd(
-					input_tensor_mode,
-					core_tensor_mode,
-					rp,
-					*cuda_stream_uptr.get(),
-					*cusolver_handle_uptr.get(),
-					cutensor_handle
-					);
-			test_hosvd(
-					input_tensor_mode,
-					core_tensor_mode,
-					hosvd,
-					*cuda_stream_uptr.get()
-					);
+			{
+				mtk::rsvd_test::random_projection_fp32 rp(*cublas_handle_uptr.get());
+				mtk::rsvd_test::hosvd_rp hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						rp,
+						*cuda_stream_uptr.get(),
+						*cusolver_handle_uptr.get(),
+						cutensor_handle
+						);
+				test_hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						hosvd,
+						*cuda_stream_uptr.get()
+						);
 #ifdef TIME_BREAKDOWN
-			std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
-			hosvd.print_time_breakdown();
-			std::printf("# END human\n");
-			std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
-			hosvd.print_time_breakdown(true);
-			std::printf("# END csv\n");
+				std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown();
+				std::printf("# END human\n");
+				std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown(true);
+				std::printf("# END csv\n");
 #endif
-		}
-		{
-			mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle);
-			mtk::rsvd_test::hosvd_rp hosvd(
-					input_tensor_mode,
-					core_tensor_mode,
-					rp,
-					*cuda_stream_uptr.get(),
-					*cusolver_handle_uptr.get(),
-					cutensor_handle
-					);
-			test_hosvd(
-					input_tensor_mode,
-					core_tensor_mode,
-					hosvd,
-					*cuda_stream_uptr.get()
-					);
+			}
+			{
+				mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle);
+				mtk::rsvd_test::hosvd_rp hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						rp,
+						*cuda_stream_uptr.get(),
+						*cusolver_handle_uptr.get(),
+						cutensor_handle
+						);
+				test_hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						hosvd,
+						*cuda_stream_uptr.get()
+						);
 #ifdef TIME_BREAKDOWN
-			std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
-			hosvd.print_time_breakdown();
-			std::printf("# END human\n");
-			std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
-			hosvd.print_time_breakdown(true);
-			std::printf("# END csv\n");
+				std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown();
+				std::printf("# END human\n");
+				std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown(true);
+				std::printf("# END csv\n");
 #endif
+			}
 		}
 	}
 	mtk::shgemm::destroy(shgemm_handle);

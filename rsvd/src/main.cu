@@ -154,7 +154,7 @@ void standard_test() {
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
 
 	print_csv_header();
-	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
+	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m += 2) {
 		//for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
 		{
 			const auto log_n = log_m;
@@ -369,12 +369,15 @@ void watermark(
 		std::printf("image_matrix = (%lu x %lu)\n", w, h);
 		std::fflush(stdout);
 
-		const auto tmp_str_list = str_split(file_name, '.');
+		const auto tmp_str_list = str_split(file_name, '/');
 		for (const auto& s : tmp_str_list) std::printf("%s ", s.c_str());
 		std::printf("\n");
-		std::printf("%s\n", tmp_str_list[0].c_str());
-		const auto tmp_str_list_base = str_split(tmp_str_list[tmp_str_list.size() - 4] + '.' + tmp_str_list[tmp_str_list.size() - 3], '/');
-		const auto base_name = tmp_str_list_base[tmp_str_list_base.size() - 1];
+		const auto tmp_str_list_2 = str_split(tmp_str_list[tmp_str_list.size() - 1], '.');
+		auto base_name = tmp_str_list_2[0];
+		for (unsigned i = 0; i < tmp_str_list_2.size() - 2; i++) {
+			base_name += "." + tmp_str_list_2[i];
+		}
+
 		std::printf("base_name = %s\n", base_name.c_str());
 		std::fflush(stdout);
 
