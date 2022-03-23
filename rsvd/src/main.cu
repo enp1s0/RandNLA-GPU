@@ -422,6 +422,16 @@ void accuracy_test() {
 						*cuda_stream.get()
 						);
 				evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
+				mtk::rsvd_test::svd_cusolver svd_cusolver(
+						*cusolver_handle.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get()
+						);
+				evaluate(matrix_name, svd_cusolver, n_tests, *cuda_stream.get());
 #endif
 			}
 		}
@@ -612,6 +622,20 @@ void watermark(
 		}
 		{
 			mtk::rsvd_test::svdj_cusolver rsvd(
+					*cusolver_handle.get(),
+					m, n, decomp_k, p, n_iter,
+					image_matrix_uptr.get(), m,
+					u_uptr.get(), m,
+					s_uptr.get(),
+					v_uptr.get(), n,
+					*cuda_stream.get()
+					);
+
+			// load
+			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
+		}
+		{
+			mtk::rsvd_test::svd_cusolver rsvd(
 					*cusolver_handle.get(),
 					m, n, decomp_k, p, n_iter,
 					image_matrix_uptr.get(), m,
