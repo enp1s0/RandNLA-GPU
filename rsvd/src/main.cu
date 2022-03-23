@@ -374,7 +374,7 @@ void watermark(
 		std::printf("\n");
 		const auto tmp_str_list_2 = str_split(tmp_str_list[tmp_str_list.size() - 1], '.');
 		auto base_name = tmp_str_list_2[0];
-		for (unsigned i = 0; i < tmp_str_list_2.size() - 2; i++) {
+		for (unsigned i = 1; i < tmp_str_list_2.size() - 2; i++) {
 			base_name += "." + tmp_str_list_2[i];
 		}
 
@@ -385,7 +385,7 @@ void watermark(
 		const auto m = h;
 		const auto n = w;
 		const auto p = 100lu;
-		const auto decomp_k = std::stoul(tmp_str_list[tmp_str_list.size() - 2]);
+		const auto decomp_k = std::stoul(tmp_str_list_2[tmp_str_list_2.size() - 2]);
 
 		std::printf("input=(%lu, %lu), k = %lu, p = %lu\n", m, n, decomp_k, p);
 		std::fflush(stdout);
