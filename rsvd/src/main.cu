@@ -13,10 +13,12 @@
 #include <matfile/matfile.hpp>
 #include <fphistogram/fphistogram.hpp>
 
-constexpr unsigned min_log_m = 9;
-constexpr unsigned max_log_m = 10;
-constexpr unsigned min_log_n = 9;
-constexpr unsigned max_log_n = 10;
+constexpr unsigned min_log_m = 11;
+constexpr unsigned max_log_m = 15;
+constexpr unsigned log_m_interval = 2;
+constexpr unsigned min_log_n = 11;
+constexpr unsigned max_log_n = 15;
+constexpr unsigned log_n_interval = 2;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 0;
 constexpr unsigned additional_num_tests_for_time_breakdown = 20;
@@ -152,9 +154,10 @@ void breakdown_eval() {
 	mtk::shgemm::shgemmHandle_t shgemm_handle;
 	mtk::shgemm::create(shgemm_handle);
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
+	mtk::shgemm::enable_kernel_level_fixing(shgemm_handle, mtk::shgemm::detail::P1);
 
 	print_csv_header();
-	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m += 2) {
+	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m += log_m_interval) {
 		//for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
 		{
 			const auto log_n = log_m;
