@@ -286,7 +286,7 @@ void accuracy_test() {
 	mtk::shgemm::create(shgemm_handle);
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
 
-	std::vector<std::string> matrix_list = {"latms", "latms_sigmoid"};
+	std::vector<std::string> matrix_list = {"latms"/*, "latms_sigmoid"*/};
 
 	print_csv_header();
 	for (const auto& matrix : matrix_list) {
@@ -459,20 +459,6 @@ void designed_accuracy_test() {
 
 			svd_t svd(*cusolver_handle.get());
 
-#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
-			mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
-					*cusolver_handle.get(),
-					*cusolver_params.get(),
-					m, n, decomp_k, p, n_iter,
-					nullptr, m,
-					nullptr, m,
-					nullptr,
-					nullptr, n,
-					*cuda_stream.get()
-					);
-			evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
-#endif
-
 			{
 				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
@@ -553,6 +539,29 @@ void designed_accuracy_test() {
 					*cuda_stream.get()
 					);
 			evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
+
+			mtk::rsvd_test::svd_cusolver svd_cusolver(
+					*cusolver_handle.get(),
+					m, n, decomp_k, p, n_iter,
+					nullptr, m,
+					nullptr, m,
+					nullptr,
+					nullptr, n,
+					*cuda_stream.get()
+					);
+			evaluate(matrix_name, svd_cusolver, n_tests, *cuda_stream.get());
+
+			mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
+					*cusolver_handle.get(),
+					*cusolver_params.get(),
+					m, n, decomp_k, p, n_iter,
+					nullptr, m,
+					nullptr, m,
+					nullptr,
+					nullptr, n,
+					*cuda_stream.get()
+					);
+			evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 #endif
 		}
 	}
@@ -741,6 +750,20 @@ void watermark(
 		}
 		{
 			mtk::rsvd_test::svdj_cusolver rsvd(
+					*cusolver_handle.get(),
+					m, n, decomp_k, p, n_iter,
+					image_matrix_uptr.get(), m,
+					u_uptr.get(), m,
+					s_uptr.get(),
+					v_uptr.get(), n,
+					*cuda_stream.get()
+					);
+
+			// load
+			watermark_core(rsvd, output_dir, base_name, u_uptr.get(), s_uptr.get(), v_uptr.get());
+		}
+		{
+			mtk::rsvd_test::svd_cusolver rsvd(
 					*cusolver_handle.get(),
 					m, n, decomp_k, p, n_iter,
 					image_matrix_uptr.get(), m,
