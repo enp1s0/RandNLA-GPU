@@ -286,7 +286,7 @@ void accuracy_test() {
 	mtk::shgemm::create(shgemm_handle);
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
 
-	std::vector<std::string> matrix_list = {"latms", "latms_sigmoid"};
+	std::vector<std::string> matrix_list = {"latms"/*, "latms_sigmoid"*/};
 
 	print_csv_header();
 	for (const auto& matrix : matrix_list) {
