@@ -1,6 +1,8 @@
 #include <input_matrix.hpp>
 #include <matfile/matfile.hpp>
 #include <chrono>
+#include <vector>
+#include <sstream>
 
 namespace {
 inline std::string sec2fmt(
@@ -26,7 +28,18 @@ inline std::string sec2fmt(
 
 	return std::string(buffer);
 }
+std::vector<std::string> str_split(const std::string str, const char d) {
+	std::vector<std::string> strings;
+	std::stringstream ss(str);
+	std::string s;
+	while (getline(ss, s, d)) {
+		if (s.length() != 0) {
+			strings.push_back(s);
+		}
+	}
+	return strings;
 }
+} // noname namespace
 
 int mtk::rsvd_test::exist_input_matrix(
 	const std::string input_matrix_name,
@@ -92,6 +105,20 @@ void mtk::rsvd_test::get_input_matrix(
 			ptr, m,
 			m, n,
 			p,
+			seed
+			);
+		generated = true;
+	} else if (matrix_name_base == "designed") {
+		const auto str_list = str_split(input_matrix_name, '-');
+		const auto matrix_name = str_list[1];
+		const auto p = std::stoul(str_list[2]);
+		const auto log_s_p = std::stod(str_list[3]);
+		mtk::rsvd_test::gen_latms_designed_matrix(
+			ptr, m,
+			m, n,
+			p,
+			-log_s_p,
+			matrix_name,
 			seed
 			);
 		generated = true;

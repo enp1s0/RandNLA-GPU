@@ -14,10 +14,10 @@
 #include <fphistogram/fphistogram.hpp>
 
 constexpr unsigned min_log_m = 11;
-constexpr unsigned max_log_m = 15;
+constexpr unsigned max_log_m = 13;
 constexpr unsigned log_m_interval = 2;
 constexpr unsigned min_log_n = 11;
-constexpr unsigned max_log_n = 15;
+constexpr unsigned max_log_n = 13;
 constexpr unsigned log_n_interval = 2;
 constexpr unsigned n_tests = 10;
 constexpr unsigned n_iter = 0;
@@ -290,46 +290,179 @@ void accuracy_test() {
 
 	print_csv_header();
 	for (const auto& matrix : matrix_list) {
-	for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
-		//for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
-		{
-			const auto log_n = log_m;
-			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned rank_index = 0; rank_index < 3; rank_index++) {
-				const auto m = 1u << log_m;
-				const auto n = 1u << log_n;
+		for (unsigned log_m = min_log_n; log_m <= max_log_m; log_m++) {
+			//for (unsigned log_n = min_log_n; log_n <= max_log_n; log_n++) {
+			{
+				const auto log_n = log_m;
+				const auto max_log_k = std::min(log_m, log_n);
+				for (unsigned rank_index = 0; rank_index < 3; rank_index++) {
+					const auto m = 1u << log_m;
+					const auto n = 1u << log_n;
 
-				unsigned rank = 0;
-				unsigned k = 0;
-				if (matrix == "latms") {
-					rank = std::min(m, n) / 32;
-					switch(rank_index) {
+					unsigned rank = 0;
+					unsigned k = 0;
+					if (matrix == "latms") {
+						rank = std::min(m, n) / 32;
+						switch(rank_index) {
 						case 0: k = rank * 999 / 1000; break;
 						case 1: k = rank * 1000 / 1000; break;
 						case 2: k = rank * 1001 / 1000; break;
 						default: break;
-					}
-				} else if (matrix == "latms_sigmoid") {
-					rank = std::min(m, n) / 32;
-					switch(rank_index) {
+						}
+					} else if (matrix == "latms_sigmoid") {
+						rank = std::min(m, n) / 32;
+						switch(rank_index) {
 						case 0: k = rank * 15 / 10; break;
 						case 1: k = rank * 2; break;
 						case 2: k = rank * 4; break;
 						default: break;
+						}
 					}
-				}
-				const auto decomp_k = k;
-				const auto p = 32;
-				if (decomp_k + p > std::min(m, n)) {
-					break;
-				}
+					const auto decomp_k = k;
+					const auto p = 32;
+					if (decomp_k + p > std::min(m, n)) {
+						break;
+					}
 
-				const std::string matrix_name = matrix + "-" + std::to_string(rank);
-				
-				svd_t svd(*cusolver_handle.get());
+					const std::string matrix_name = matrix + "-" + std::to_string(rank);
+
+					svd_t svd(*cusolver_handle.get());
 
 #if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
-				mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
+					mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
+							*cusolver_handle.get(),
+							*cusolver_params.get(),
+							m, n, decomp_k, p, n_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get()
+							);
+					evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
+#endif
+
+					{
+						mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
+						mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+								*cublas_handle.get(),
+								*cusolver_handle.get(),
+								*cusolver_params.get(),
+								m, n, decomp_k, p, n_iter,
+								nullptr, m,
+								nullptr, m,
+								nullptr,
+								nullptr, n,
+								*cuda_stream.get(),
+								svd,
+								rand_proj_fp32
+								);
+						evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+					}
+					{
+						mtk::rsvd_test::random_projection_tf32 rand_proj_tf32(*cublas_handle.get());
+						mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+								*cublas_handle.get(),
+								*cusolver_handle.get(),
+								*cusolver_params.get(),
+								m, n, decomp_k, p, n_iter,
+								nullptr, m,
+								nullptr, m,
+								nullptr,
+								nullptr, n,
+								*cuda_stream.get(),
+								svd,
+								rand_proj_tf32
+								);
+						evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+					}
+					{
+						mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::tf32);
+						mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+								*cublas_handle.get(),
+								*cusolver_handle.get(),
+								*cusolver_params.get(),
+								m, n, decomp_k, p, n_iter,
+								nullptr, m,
+								nullptr, m,
+								nullptr,
+								nullptr, n,
+								*cuda_stream.get(),
+								svd,
+								rand_proj_shgemm
+								);
+						evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+					}
+					{
+						mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::fp16);
+						mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+								*cublas_handle.get(),
+								*cusolver_handle.get(),
+								*cusolver_params.get(),
+								m, n, decomp_k, p, n_iter,
+								nullptr, m,
+								nullptr, m,
+								nullptr,
+								nullptr, n,
+								*cuda_stream.get(),
+								svd,
+								rand_proj_shgemm
+								);
+						evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+					}
+
+#if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
+					mtk::rsvd_test::svdj_cusolver svdj_cusolver(
+							*cusolver_handle.get(),
+							m, n, decomp_k, p, n_iter,
+							nullptr, m,
+							nullptr, m,
+							nullptr,
+							nullptr, n,
+							*cuda_stream.get()
+							);
+					evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
+#endif
+				}
+			}
+		}
+	}
+	mtk::shgemm::destroy(shgemm_handle);
+}
+
+void designed_accuracy_test() {
+	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
+	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
+	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
+	auto cublas_handle = cutf::cublas::get_cublas_unique_ptr();
+	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle.get(), *cuda_stream.get()));
+	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
+	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle.get(), *cuda_stream.get()));
+
+	mtk::shgemm::shgemmHandle_t shgemm_handle;
+	mtk::shgemm::create(shgemm_handle);
+	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
+
+	std::vector<std::string> matrix_list = {"linear", "exp"};
+	const std::size_t mat_N = 1u << 12;
+
+	const std::size_t m = mat_N;
+	const std::size_t n = mat_N;
+	const std::size_t decomp_k = mat_N / 16;
+
+	print_csv_header();
+	for (const auto& matrix : matrix_list) {
+		for (int log_s_p = -10; log_s_p <= -3; log_s_p++) {
+			const auto p = 32;
+
+			const std::string matrix_name = "designed-" + matrix + "-" + std::to_string(decomp_k) + "-" + std::to_string(-log_s_p);
+
+			svd_t svd(*cusolver_handle.get());
+
+			{
+				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
 						*cusolver_handle.get(),
 						*cusolver_params.get(),
 						m, n, decomp_k, p, n_iter,
@@ -337,105 +470,100 @@ void accuracy_test() {
 						nullptr, m,
 						nullptr,
 						nullptr, n,
-						*cuda_stream.get()
+						*cuda_stream.get(),
+						svd,
+						rand_proj_fp32
 						);
-				evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
-#endif
-
-				{
-					mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
-					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
-							*cublas_handle.get(),
-							*cusolver_handle.get(),
-							*cusolver_params.get(),
-							m, n, decomp_k, p, n_iter,
-							nullptr, m,
-							nullptr, m,
-							nullptr,
-							nullptr, n,
-							*cuda_stream.get(),
-							svd,
-							rand_proj_fp32
-							);
-					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
-				}
-				{
-					mtk::rsvd_test::random_projection_tf32 rand_proj_tf32(*cublas_handle.get());
-					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
-							*cublas_handle.get(),
-							*cusolver_handle.get(),
-							*cusolver_params.get(),
-							m, n, decomp_k, p, n_iter,
-							nullptr, m,
-							nullptr, m,
-							nullptr,
-							nullptr, n,
-							*cuda_stream.get(),
-							svd,
-							rand_proj_tf32
-							);
-					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
-				}
-				{
-					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::tf32);
-					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
-							*cublas_handle.get(),
-							*cusolver_handle.get(),
-							*cusolver_params.get(),
-							m, n, decomp_k, p, n_iter,
-							nullptr, m,
-							nullptr, m,
-							nullptr,
-							nullptr, n,
-							*cuda_stream.get(),
-							svd,
-							rand_proj_shgemm
-							);
-					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
-				}
-				{
-					mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::fp16);
-					mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
-							*cublas_handle.get(),
-							*cusolver_handle.get(),
-							*cusolver_params.get(),
-							m, n, decomp_k, p, n_iter,
-							nullptr, m,
-							nullptr, m,
-							nullptr,
-							nullptr, n,
-							*cuda_stream.get(),
-							svd,
-							rand_proj_shgemm
-							);
-					evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
-				}
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				mtk::rsvd_test::random_projection_tf32 rand_proj_tf32(*cublas_handle.get());
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_tf32
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::tf32);
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_shgemm
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				mtk::rsvd_test::random_projection_shgemm rand_proj_shgemm(shgemm_handle, mtk::shgemm::fp16);
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_shgemm
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
 
 #if defined(RUN_REFERENCE_FUNCTIONS) && !defined(TIME_BREAKDOWN)
-				mtk::rsvd_test::svdj_cusolver svdj_cusolver(
-						*cusolver_handle.get(),
-						m, n, decomp_k, p, n_iter,
-						nullptr, m,
-						nullptr, m,
-						nullptr,
-						nullptr, n,
-						*cuda_stream.get()
-						);
-				evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
-				mtk::rsvd_test::svd_cusolver svd_cusolver(
-						*cusolver_handle.get(),
-						m, n, decomp_k, p, n_iter,
-						nullptr, m,
-						nullptr, m,
-						nullptr,
-						nullptr, n,
-						*cuda_stream.get()
-						);
-				evaluate(matrix_name, svd_cusolver, n_tests, *cuda_stream.get());
+			mtk::rsvd_test::svdj_cusolver svdj_cusolver(
+					*cusolver_handle.get(),
+					m, n, decomp_k, p, n_iter,
+					nullptr, m,
+					nullptr, m,
+					nullptr,
+					nullptr, n,
+					*cuda_stream.get()
+					);
+			evaluate(matrix_name, svdj_cusolver, n_tests, *cuda_stream.get());
+
+			mtk::rsvd_test::svd_cusolver svd_cusolver(
+					*cusolver_handle.get(),
+					m, n, decomp_k, p, n_iter,
+					nullptr, m,
+					nullptr, m,
+					nullptr,
+					nullptr, n,
+					*cuda_stream.get()
+					);
+			evaluate(matrix_name, svd_cusolver, n_tests, *cuda_stream.get());
+
+			mtk::rsvd_test::rsvd_cusolver rsvd_cusolver(
+					*cusolver_handle.get(),
+					*cusolver_params.get(),
+					m, n, decomp_k, p, n_iter,
+					nullptr, m,
+					nullptr, m,
+					nullptr,
+					nullptr, n,
+					*cuda_stream.get()
+					);
+			evaluate(matrix_name, rsvd_cusolver, n_tests, *cuda_stream.get());
 #endif
-			}
 		}
-	}
 	}
 	mtk::shgemm::destroy(shgemm_handle);
 }
@@ -650,13 +778,15 @@ void watermark(
 		}
 	}
 }
-} // noname namespace
+}
 
 int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
 	} else if (argc == 2 && std::string(argv[1]) == "breakdown") {
 		breakdown_eval();
+	} else if (argc == 2 && std::string(argv[1]) == "designed") {
+		designed_accuracy_test();
 	} else {
 		accuracy_test();
 	}
