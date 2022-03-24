@@ -103,7 +103,7 @@ void mtk::rsvd_test::gen_latms_designed_matrix(
 			s_vec[i] = target_s;
 		}
 	} else if (name == "exp") {
-		const auto q = std::log2(target_s / p);
+		const auto q = std::log2(target_s) / p;
 		for (std::size_t i = 0; i < std::min(m, n); i++) {
 			s_vec[i] = std::pow<float>(2.f, q * i);
 		}
