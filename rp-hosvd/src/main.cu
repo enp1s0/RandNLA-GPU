@@ -12,14 +12,14 @@ constexpr unsigned min_rank_log = 6;
 constexpr unsigned num_throughput_test = 1u << 4;
 
 void test_hosvd(
-		const cutt::mode_t& input_tensor_mode,
-		const cutt::mode_t& core_tensor_mode,
+		const cuta::mode_t& input_tensor_mode,
+		const cuta::mode_t& core_tensor_mode,
 		mtk::rsvd_test::hosvd_base& hosvd,
 		cudaStream_t cuda_stream
 		) {
 	// memory allocations
-	const auto input_size = cutt::utils::get_num_elements(input_tensor_mode);
-	const auto S_size = cutt::utils::get_num_elements(core_tensor_mode);
+	const auto input_size = cuta::utils::get_num_elements(input_tensor_mode);
+	const auto S_size = cuta::utils::get_num_elements(core_tensor_mode);
 
 	auto A_ptr = cutf::memory::malloc_async<float>(input_size, cuda_stream);
 	auto S_ptr = cutf::memory::malloc_async<float>(S_size, cuda_stream);
@@ -97,11 +97,11 @@ int main() {
 			const auto rank = 1u << rank_log;
 			const auto dim = 1u << tensor_dim_log;
 
-			cutt::mode_t input_tensor_mode;
-			cutt::mode_t core_tensor_mode;
+			cuta::mode_t input_tensor_mode;
+			cuta::mode_t core_tensor_mode;
 			for (unsigned i = 0; i < num_mode; i++) {
-				cutt::utils::insert_mode(input_tensor_mode, "m-" + std::to_string(i), dim);
-				cutt::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
+				cuta::utils::insert_mode(input_tensor_mode, "m-" + std::to_string(i), dim);
+				cuta::utils::insert_mode(core_tensor_mode , "c-" + std::to_string(i), rank);
 			}
 
 			{
@@ -130,7 +130,7 @@ int main() {
 #endif
 			}
 			{
-				mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle);
+				mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle, mtk::shgemm::tf32);
 				mtk::rsvd_test::hosvd_rp hosvd(
 						input_tensor_mode,
 						core_tensor_mode,
