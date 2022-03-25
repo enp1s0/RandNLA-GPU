@@ -7,6 +7,7 @@
 #include <rand_projection_base.hpp>
 #include <cutf/debug/time_breakdown.hpp>
 #include <cuta/utils.hpp>
+#include <cutt.h>
 namespace mtk {
 namespace rsvd_test {
 class hosvd_base {
@@ -92,6 +93,7 @@ class hosvd_rp : public hosvd_base {
 	std::vector<cuta::mode_t> tmp_core_tensor_mode;
 	std::vector<uint32_t> tmp_core_tensor_alignment_requirement;
 	std::vector<cutensorTensorDescriptor_t> tmp_core_tensor_desc;
+	std::vector<cuttHandle> cutt_handle_list;
 
 	std::vector<cutensorContractionDescriptor_t> contraction_desc;
 	std::vector<cutensorContractionFind_t> contraction_find;
