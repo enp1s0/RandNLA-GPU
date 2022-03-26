@@ -6,13 +6,13 @@
 #include <cutf/cusolver.hpp>
 #include <rand_projection_base.hpp>
 #include <cutf/debug/time_breakdown.hpp>
-#include <cutt/utils.hpp>
+#include <cuta/utils.hpp>
 namespace mtk {
 namespace rsvd_test {
 class hosvd_base {
 protected:
-	const cutt::mode_t input_tensor_mode;
-	const cutt::mode_t core_tensor_mode;
+	const cuta::mode_t input_tensor_mode;
+	const cuta::mode_t core_tensor_mode;
 
 	float* A_ptr;
 	float* S_ptr;
@@ -28,8 +28,8 @@ protected:
 public:
 	hosvd_base(
 			const std::string name,
-			const cutt::mode_t input_tensor_mode,
-			const cutt::mode_t core_tensor_mode,
+			const cuta::mode_t input_tensor_mode,
+			const cuta::mode_t core_tensor_mode,
 			cudaStream_t cuda_stream,
 			cusolverDnHandle_t cusolver_handle,
 			cutensorHandle_t cutensor_handle
@@ -42,6 +42,7 @@ public:
 		cutensor_handle(cutensor_handle)	{}
 
 	std::string get_name_str() const {return std::string("hosvd-") + name;}
+	cutensorHandle_t get_cutensor_handle() {return cutensor_handle;};
 
 	void set_config(
 			float* const i_A_ptr,
@@ -67,6 +68,8 @@ public:
 			profiler.print_result();
 		}
 	}
+
+	virtual float* get_work_mem_ptr() = 0;
 };
 
 class hosvd_rp : public hosvd_base {
@@ -86,10 +89,10 @@ class hosvd_rp : public hosvd_base {
 		std::size_t tau_size;
 	} working_memory;
 
-	std::vector<cutt::mode_t> Q_tensor_mode;
+	std::vector<cuta::mode_t> Q_tensor_mode;
 	std::vector<uint32_t> Q_tensor_alignment_requirement;
 	std::vector<cutensorTensorDescriptor_t> Q_tensor_desc;
-	std::vector<cutt::mode_t> tmp_core_tensor_mode;
+	std::vector<cuta::mode_t> tmp_core_tensor_mode;
 	std::vector<uint32_t> tmp_core_tensor_alignment_requirement;
 	std::vector<cutensorTensorDescriptor_t> tmp_core_tensor_desc;
 
@@ -101,8 +104,8 @@ class hosvd_rp : public hosvd_base {
 	void* contraction_working_mem_ptr;
 public:
 	hosvd_rp(
-			const cutt::mode_t input_tensor_mode,
-			const cutt::mode_t core_tensor_mode,
+			const cuta::mode_t input_tensor_mode,
+			const cuta::mode_t core_tensor_mode,
 			mtk::rsvd_test::random_projection_base& random_projection,
 			cudaStream_t cuda_stream,
 			cusolverDnHandle_t cusolver_handle,
@@ -114,6 +117,7 @@ public:
 	void prepare();
 	void run();
 	void clean();
+	float* get_work_mem_ptr() {return working_memory.alloc_ptr;}
 };
 } // namespace rsvd_test
 } // namespace mtk

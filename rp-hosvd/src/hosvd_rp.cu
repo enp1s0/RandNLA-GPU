@@ -1,6 +1,6 @@
 #include <cutf/memory.hpp>
-#include <cutt/cutensor_utils.hpp>
-#include <cutt/reshape.hpp>
+#include <cutf/cutensor.hpp>
+#include <cuta/cutensor_utils.hpp>
 #include <cuda_common.hpp>
 #include "hosvd_test.hpp"
 
@@ -16,7 +16,7 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	working_memory.alloc_ptr = nullptr;
 	contraction_working_mem_ptr = nullptr;
 
-	const std::size_t prod = cutt::utils::get_num_elements(input_tensor_mode);
+	const std::size_t prod = cuta::utils::get_num_elements(input_tensor_mode);
 	std::size_t max_rand_matrix_m = 0;
 	std::size_t max_rand_matrix_n = 0;
 	std::size_t max_rand_matrix_size = 0;
@@ -51,7 +51,7 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		Q_tensor_mode[i].push_back(input_tensor_mode[i]);
 		Q_tensor_mode[i].push_back(core_tensor_mode[i]);
-		Q_tensor_desc[i] = cutt::cutensor::get_descriptor<float>(cutensor_handle, Q_tensor_mode[i]);
+		Q_tensor_desc[i] = cuta::cutensor::get_descriptor<float>(cutensor_handle, Q_tensor_mode[i]);
 		CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, Q_ptr[i], &Q_tensor_desc[i], &Q_tensor_alignment_requirement[i]));
 
 		int qr_size_0, qr_size_1;
@@ -76,7 +76,6 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		working_memory.qr_size  = std::max<std::size_t>(working_memory.qr_size , std::max(qr_size_0, qr_size_1)) + 1;
 	}
 
-
 	// Allocation (1)
 	working_memory.alloc_size = working_memory.ttgt_size + working_memory.qr_size + working_memory.tau_size + 1 /*dev*/;
 
@@ -97,7 +96,7 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 	tmp_core_tensor_desc.resize                 (input_tensor_mode.size() + 1);
 	tmp_core_tensor_alignment_requirement.resize(input_tensor_mode.size() + 1);
 	tmp_core_tensor_mode[0] = input_tensor_mode;
-	tmp_core_tensor_desc[0] = cutt::cutensor::get_descriptor<float>(cutensor_handle, input_tensor_mode);
+	tmp_core_tensor_desc[0] = cuta::cutensor::get_descriptor<float>(cutensor_handle, input_tensor_mode);
 	CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, A_ptr, &tmp_core_tensor_desc[0], &tmp_core_tensor_alignment_requirement[0]));
 	for (unsigned i = 1; i <= input_tensor_mode.size(); i++) {
 		auto t_mode = tmp_core_tensor_mode[i - 1];
@@ -112,16 +111,16 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		} else {
 			mem_ptr = working_memory.alloc_ptr;
 		}
-		tmp_core_tensor_desc[i] = cutt::cutensor::get_descriptor<float>(cutensor_handle, tmp_core_tensor_mode[i]);
+		tmp_core_tensor_desc[i] = cuta::cutensor::get_descriptor<float>(cutensor_handle, tmp_core_tensor_mode[i]);
 		CUTT_CHECK_ERROR(cutensorGetAlignmentRequirement(&cutensor_handle, mem_ptr, &tmp_core_tensor_desc[i], &tmp_core_tensor_alignment_requirement[i]));
 
 		// Set contraction descriptor
 		CUTT_CHECK_ERROR(cutensorInitContractionDescriptor(&cutensor_handle, &contraction_desc[i - 1],
-				&tmp_core_tensor_desc[i - 1], cutt::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i - 1]).data(), tmp_core_tensor_alignment_requirement[i - 1],
-				&Q_tensor_desc       [i - 1], cutt::cutensor::get_extent_list_in_int(Q_tensor_mode       [i - 1]).data(), Q_tensor_alignment_requirement       [i - 1],
-				&tmp_core_tensor_desc[i    ], cutt::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i    ]).data(), tmp_core_tensor_alignment_requirement[i    ],
-				&tmp_core_tensor_desc[i    ], cutt::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i    ]).data(), tmp_core_tensor_alignment_requirement[i    ],
-				cutt::cutensor::get_compute_type<float>()));
+				&tmp_core_tensor_desc[i - 1], cuta::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i - 1]).data(), tmp_core_tensor_alignment_requirement[i - 1],
+				&Q_tensor_desc       [i - 1], cuta::cutensor::get_extent_list_in_int(Q_tensor_mode       [i - 1]).data(), Q_tensor_alignment_requirement       [i - 1],
+				&tmp_core_tensor_desc[i    ], cuta::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i    ]).data(), tmp_core_tensor_alignment_requirement[i    ],
+				&tmp_core_tensor_desc[i    ], cuta::cutensor::get_extent_list_in_int(tmp_core_tensor_mode[i    ]).data(), tmp_core_tensor_alignment_requirement[i    ],
+				cuta::cutensor::get_compute_type<float>()));
 
 		// Set find
 		CUTT_CHECK_ERROR(cutensorInitContractionFind(&cutensor_handle, &contraction_find[i - 1], CUTENSOR_ALGO_DEFAULT));
@@ -151,8 +150,11 @@ void mtk::rsvd_test::hosvd_rp::clean() {
 }
 
 void mtk::rsvd_test::hosvd_rp::run() {
+	const float alpha = 1.f;
+	const float beta = 0.f;
 	// Transpose the tensor
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
+		// Transpose
 		std::vector<std::string> reshaped_mode_order(input_tensor_mode.size());
 		const auto target_mode_name = input_tensor_mode[i].first;
 		reshaped_mode_order[0] = target_mode_name;
@@ -161,20 +163,28 @@ void mtk::rsvd_test::hosvd_rp::run() {
 				reshaped_mode_order[k++] = input_tensor_mode[j].first;
 			}
 		}
-		// Transpose
+		const auto permutated_mode = cuta::utils::get_permutated_mode(input_tensor_mode, reshaped_mode_order);
+		const auto desc_A = cuta::cutensor::get_descriptor<float>(cutensor_handle, input_tensor_mode);
+		const auto desc_B = cuta::cutensor::get_descriptor<float>(cutensor_handle, permutated_mode);
 		CUTF_PROFILE_START_TIMER("reshape");
-		cutt::reshape(
-				working_memory.ttgt_ptr,
-				A_ptr,
-				input_tensor_mode,
-				reshaped_mode_order,
-				cuda_stream
-				);
+		//cuttExecute(cutt_handle_list[i], A_ptr, working_memory.ttgt_ptr);
+		CUTF_CHECK_ERROR(cutensorPermutation(
+					&cutensor_handle,
+					&alpha,
+					A_ptr,
+					&desc_A,
+					cuta::cutensor::get_extent_list_in_int(input_tensor_mode).data(),
+					working_memory.ttgt_ptr,
+					&desc_B,
+					cuta::cutensor::get_extent_list_in_int(permutated_mode).data(),
+					cuta::cutensor::get_data_type<float>(),
+					cuda_stream
+					));
 		CUTF_PROFILE_STOP_TIMER("reshape");
 		CUTF_PROFILE_START_TIMER("random_projection");
 		// Rand projection
 		random_projection.apply(
-				input_tensor_mode[i].second, cutt::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second, core_tensor_mode[i].second,
+				input_tensor_mode[i].second, cuta::utils::get_num_elements(input_tensor_mode) / input_tensor_mode[i].second, core_tensor_mode[i].second,
 				Q_ptr[i], input_tensor_mode[i].second,
 				working_memory.ttgt_ptr, input_tensor_mode[i].second
 				);
@@ -184,7 +194,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.geqrf_size[i],
@@ -194,7 +204,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
 					core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.orgqr_size[i],
@@ -203,8 +213,6 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		CUTF_PROFILE_STOP_TIMER("qr");
 	}
 	// Compute the core tensor
-	const float alpha = 1.f;
-	const float beta = 0.f;
 	float *input_ptr;
 	float *output_ptr;
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
@@ -225,7 +233,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 				&contraction_plan[i],
 				reinterpret_cast<const void*>(&alpha), input_ptr, Q_ptr[i],
 				reinterpret_cast<const void*>(&beta), output_ptr, output_ptr,
-				contraction_working_mem_ptr, contraction_working_mem_size[i], 0
+				contraction_working_mem_ptr, contraction_working_mem_size[i], cuda_stream
 				));
 		CUTF_PROFILE_STOP_TIMER("tensor_contraction");
 	}
