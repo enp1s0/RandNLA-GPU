@@ -1,4 +1,5 @@
 #include <cutf/memory.hpp>
+#include <cutf/cutensor.hpp>
 #include <cuta/cutensor_utils.hpp>
 #include <cuda_common.hpp>
 #include "hosvd_test.hpp"
@@ -75,29 +76,6 @@ void mtk::rsvd_test::hosvd_rp::prepare() {
 		working_memory.qr_size  = std::max<std::size_t>(working_memory.qr_size , std::max(qr_size_0, qr_size_1)) + 1;
 	}
 
-	// cutt
-	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
-		std::vector<std::string> reshaped_mode_order(input_tensor_mode.size());
-		const auto target_mode_name = input_tensor_mode[i].first;
-		reshaped_mode_order[0] = target_mode_name;
-		for (unsigned j = 0, k = 1; j < input_tensor_mode.size(); j++) {
-			if (i != j) {
-				reshaped_mode_order[k++] = input_tensor_mode[j].first;
-			}
-		}
-		const auto permutation = cuta::utils::get_permutation<int>(input_tensor_mode, reshaped_mode_order);
-		cuttHandle cutt_handle;
-		cuttPlan(
-				&cutt_handle,
-				input_tensor_mode.size(),
-				cuta::utils::get_dim_sizes<int>(input_tensor_mode).data(),
-				const_cast<int*>(permutation.data()),
-				sizeof(float),
-				cuda_stream
-				);
-		cutt_handle_list.push_back(cutt_handle);
-	}
-
 	// Allocation (1)
 	working_memory.alloc_size = working_memory.ttgt_size + working_memory.qr_size + working_memory.tau_size + 1 /*dev*/;
 
@@ -169,18 +147,39 @@ void mtk::rsvd_test::hosvd_rp::clean() {
 	cutf::memory::free_async(contraction_working_mem_ptr, cuda_stream);
 	contraction_working_mem_ptr = nullptr;
 	random_projection.free_working_memory();
-
-	for (auto& v : cutt_handle_list) {
-		cuttDestroy(v);
-	}
 }
 
 void mtk::rsvd_test::hosvd_rp::run() {
+	const float alpha = 1.f;
+	const float beta = 0.f;
 	// Transpose the tensor
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		// Transpose
+		std::vector<std::string> reshaped_mode_order(input_tensor_mode.size());
+		const auto target_mode_name = input_tensor_mode[i].first;
+		reshaped_mode_order[0] = target_mode_name;
+		for (unsigned j = 0, k = 1; j < input_tensor_mode.size(); j++) {
+			if (i != j) {
+				reshaped_mode_order[k++] = input_tensor_mode[j].first;
+			}
+		}
+		const auto permutated_mode = cuta::utils::get_permutated_mode(input_tensor_mode, reshaped_mode_order);
+		const auto desc_A = cuta::cutensor::get_descriptor<float>(cutensor_handle, input_tensor_mode);
+		const auto desc_B = cuta::cutensor::get_descriptor<float>(cutensor_handle, permutated_mode);
 		CUTF_PROFILE_START_TIMER("reshape");
-		cuttExecute(cutt_handle_list[i], A_ptr, working_memory.ttgt_ptr);
+		//cuttExecute(cutt_handle_list[i], A_ptr, working_memory.ttgt_ptr);
+		CUTF_CHECK_ERROR(cutensorPermutation(
+					&cutensor_handle,
+					&alpha,
+					A_ptr,
+					&desc_A,
+					cuta::cutensor::get_extent_list_in_int(input_tensor_mode).data(),
+					working_memory.ttgt_ptr,
+					&desc_B,
+					cuta::cutensor::get_extent_list_in_int(permutated_mode).data(),
+					cuta::cutensor::get_data_type<float>(),
+					cuda_stream
+					));
 		CUTF_PROFILE_STOP_TIMER("reshape");
 		CUTF_PROFILE_START_TIMER("random_projection");
 		// Rand projection
@@ -195,7 +194,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.geqrf_size[i],
@@ -205,7 +204,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
 					core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.orgqr_size[i],
@@ -214,8 +213,6 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		CUTF_PROFILE_STOP_TIMER("qr");
 	}
 	// Compute the core tensor
-	const float alpha = 1.f;
-	const float beta = 0.f;
 	float *input_ptr;
 	float *output_ptr;
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {

@@ -7,7 +7,6 @@
 #include <rand_projection_base.hpp>
 #include <cutf/debug/time_breakdown.hpp>
 #include <cuta/utils.hpp>
-#include <cutt.h>
 namespace mtk {
 namespace rsvd_test {
 class hosvd_base {
@@ -43,6 +42,7 @@ public:
 		cutensor_handle(cutensor_handle)	{}
 
 	std::string get_name_str() const {return std::string("hosvd-") + name;}
+	cutensorHandle_t get_cutensor_handle() {return cutensor_handle;};
 
 	void set_config(
 			float* const i_A_ptr,
@@ -68,6 +68,8 @@ public:
 			profiler.print_result();
 		}
 	}
+
+	virtual float* get_work_mem_ptr() = 0;
 };
 
 class hosvd_rp : public hosvd_base {
@@ -93,7 +95,6 @@ class hosvd_rp : public hosvd_base {
 	std::vector<cuta::mode_t> tmp_core_tensor_mode;
 	std::vector<uint32_t> tmp_core_tensor_alignment_requirement;
 	std::vector<cutensorTensorDescriptor_t> tmp_core_tensor_desc;
-	std::vector<cuttHandle> cutt_handle_list;
 
 	std::vector<cutensorContractionDescriptor_t> contraction_desc;
 	std::vector<cutensorContractionFind_t> contraction_find;
@@ -116,6 +117,7 @@ public:
 	void prepare();
 	void run();
 	void clean();
+	float* get_work_mem_ptr() {return working_memory.alloc_ptr;}
 };
 } // namespace rsvd_test
 } // namespace mtk
