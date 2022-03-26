@@ -233,7 +233,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 				&contraction_plan[i],
 				reinterpret_cast<const void*>(&alpha), input_ptr, Q_ptr[i],
 				reinterpret_cast<const void*>(&beta), output_ptr, output_ptr,
-				contraction_working_mem_ptr, contraction_working_mem_size[i], 0
+				contraction_working_mem_ptr, contraction_working_mem_size[i], cuda_stream
 				));
 		CUTF_PROFILE_STOP_TIMER("tensor_contraction");
 	}
