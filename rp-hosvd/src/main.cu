@@ -2,7 +2,6 @@
 #include <chrono>
 #include <cutf/cutensor.hpp>
 #include <cutf/stream.hpp>
-#include <cutf/curand.hpp>
 #include <cutf/memory.hpp>
 #include <mateval/comparison_cuda.hpp>
 #include "hosvd_test.hpp"
@@ -41,22 +40,13 @@ void test_hosvd(
 	hosvd.prepare();
 
 	// tensor elements initialization
-	unsigned long long seed = 10;
-	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_PHILOX4_32_10);
-	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
-
-	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), S_ptr, cuta::utils::get_num_elements(core_tensor_mode)));
-	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
-		CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), Q_ptrs[i], cuta::utils::get_num_elements(Q_modes[i])));
-	}
-	mtk::rsvd_test::contract(
+	mtk::rsvd_test::gen_input_tensor(
 			hosvd.get_cutensor_handle(),
 			A_ptr,
-			S_ptr,
-			core_tensor_mode,
-			Q_ptrs,
-			Q_modes,
+			S_ptr, core_tensor_mode,
+			Q_ptrs, Q_modes,
 			hosvd.get_work_mem_ptr(),
+			"random",
 			cuda_stream
 			);
 

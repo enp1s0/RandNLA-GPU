@@ -1,5 +1,7 @@
 #include <cassert>
 #include <cutf/cutensor.hpp>
+#include <cutf/curand.hpp>
+#include <cutf/cublas.hpp>
 #include <cutf/error.hpp>
 #include <cutf/memory.hpp>
 #include <cuta/cutensor_utils.hpp>
@@ -87,4 +89,86 @@ void mtk::rsvd_test::contract (
 		input_tensor_ptr = output_tensor_ptrs[i % 2];
 		cutf::memory::free_async(workspace, cuda_stream);
 	}
+}
+
+namespace {
+__global__ void rand_mp_kernel(
+		float* const ptr,
+		const std::size_t size
+		) {
+	const auto tid = blockDim.x * blockIdx.x + threadIdx.x;
+	if(tid >= size) return;
+	ptr[tid] = (ptr[tid] - 0.5) * 2;
+}
+void rand_mp(
+		float* const ptr,
+		const std::size_t size,
+		cudaStream_t cuda_stream
+		) {
+	constexpr unsigned block_size = 256;
+	rand_mp_kernel<<<(size + block_size - 1) / block_size, block_size, 0, cuda_stream>>>(ptr, size);
+}
+void gen_q_matrix(
+		float* const ptr,
+		const unsigned m, const unsigned n,
+		const std::string name,
+		curandGenerator_t curand_gen,
+		cudaStream_t cuda_stream
+		) {
+	const unsigned rank = std::min(m, n) - 10;
+
+	auto a_ptr = cutf::memory::malloc_async<float>(m * rank, cuda_stream);
+	auto b_ptr = cutf::memory::malloc_async<float>(rank * n, cuda_stream);
+
+	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(curand_gen, a_ptr, m * rank));
+	rand_mp(a_ptr, m * rank, cuda_stream);
+	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(curand_gen, b_ptr, rank * n));
+	rand_mp(b_ptr, rank * n, cuda_stream);
+
+	auto cublas_handle = cutf::cublas::get_cublas_unique_ptr();
+	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle.get(), cuda_stream));
+	float alpah = 1.0f / rank, beta = 0.0f;
+	CUTF_CHECK_ERROR(cutf::cublas::gemm(
+				*cublas_handle.get(),
+				CUBLAS_OP_N, CUBLAS_OP_N,
+				m, n, rank,
+				&alpah,
+				a_ptr, m,
+				b_ptr, rank,
+				&beta,
+				ptr, m
+				));
+}
+}
+
+void mtk::rsvd_test::gen_input_tensor(
+		cutensorHandle_t cutensor_handle,
+		float* const out_ptr,
+		float* const core_tensor_ptr,
+		const cuta::mode_t& core_tensor_mode,
+		const std::vector<float*> q_matrices,
+		const std::vector<cuta::mode_t> q_matrix_modes,
+		float* const work_ptr,
+		const std::string tensor_name,
+		cudaStream_t cuda_stream
+		) {
+	unsigned long long seed = 10;
+	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_PHILOX4_32_10);
+	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
+	CUTF_CHECK_ERROR(curandSetStream(*cugen.get(), cuda_stream));
+
+	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), core_tensor_ptr, cuta::utils::get_num_elements(core_tensor_mode)));
+	for (unsigned i = 0; i < core_tensor_mode.size(); i++) {
+		gen_q_matrix(q_matrices[i], q_matrix_modes[i][0].second, q_matrix_modes[i][1].second, tensor_name, *cugen.get(), cuda_stream);
+	}
+	mtk::rsvd_test::contract(
+			cutensor_handle,
+			out_ptr,
+			core_tensor_ptr,
+			core_tensor_mode,
+			q_matrices,
+			q_matrix_modes,
+			work_ptr,
+			cuda_stream
+			);
 }

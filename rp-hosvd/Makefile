@@ -26,7 +26,6 @@ COMMON_HEADERS=$(shell find $(COMMON_SRCDIR) -name '*.cuh' -o -name '*.hpp' -o -
 
 CXXFLAGS+=-std=c++14 -O3 -I./$(SRCDIR) -I$(COMMON_SRCDIR)
 CXXFLAGS+=-I$(COMMON_SRCDIR)/cutf/include
-CXXFLAGS+=-I$(COMMON_SRCDIR)/cutt/include -L$(COMMON_SRCDIR)/cutt/lib -lcutt
 CXXFLAGS+=-I$(COMMON_SRCDIR)/cuta/include
 CXXFLAGS+=-I$(COMMON_SRCDIR)/mateval/include -L$(COMMON_SRCDIR)/mateval/build/ -lmateval_cuda
 CXXFLAGS+=-I$(COMMON_SRCDIR)/matfile/include
