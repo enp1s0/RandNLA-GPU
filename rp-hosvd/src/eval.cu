@@ -80,7 +80,7 @@ void mtk::rsvd_test::contract (
 					&plan,
 					reinterpret_cast<const void*>(&alpha), input_tensor_ptr, q_matrices[i],
 					reinterpret_cast<const void*>(&beta), output_tensor_ptrs[i % 2], output_tensor_ptrs[i % 2],
-					workspace_ptr, work_size, 0
+					workspace_ptr, work_size, cuda_stream
 					));
 
 		current_output_mode = output_mode;
