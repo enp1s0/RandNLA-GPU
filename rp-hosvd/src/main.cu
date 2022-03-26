@@ -194,8 +194,60 @@ int main() {
 				std::printf("# END csv\n");
 #endif
 			}
+
+			{
+				mtk::rsvd_test::random_projection_tf32 rp(*cublas_handle_uptr.get());
+				mtk::rsvd_test::hosvd_rp hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						rp,
+						*cuda_stream_uptr.get(),
+						*cusolver_handle_uptr.get(),
+						cutensor_handle
+						);
+				test_hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						hosvd,
+						*cuda_stream_uptr.get()
+						);
+#ifdef TIME_BREAKDOWN
+				std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown();
+				std::printf("# END human\n");
+				std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown(true);
+				std::printf("# END csv\n");
+#endif
+			}
+
 			{
 				mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle, mtk::shgemm::tf32);
+				mtk::rsvd_test::hosvd_rp hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						rp,
+						*cuda_stream_uptr.get(),
+						*cusolver_handle_uptr.get(),
+						cutensor_handle
+						);
+				test_hosvd(
+						input_tensor_mode,
+						core_tensor_mode,
+						hosvd,
+						*cuda_stream_uptr.get()
+						);
+#ifdef TIME_BREAKDOWN
+				std::printf("# START human time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown();
+				std::printf("# END human\n");
+				std::printf("# START csv time-breakdown-%s-%u-%u\n", hosvd.get_name_str().c_str(), dim, rank);
+				hosvd.print_time_breakdown(true);
+				std::printf("# END csv\n");
+#endif
+			}
+			{
+				mtk::rsvd_test::random_projection_shgemm rp(shgemm_handle, mtk::shgemm::fp16);
 				mtk::rsvd_test::hosvd_rp hosvd(
 						input_tensor_mode,
 						core_tensor_mode,
