@@ -9,7 +9,7 @@ void mtk::rsvd_test::contract (
 		cutensorHandle_t cutensor_handle,
 		float* const out_ptr,
 		const float* const core_tensor_ptr,
-		cuta::mode_t core_tensor_mode,
+		const cuta::mode_t& core_tensor_mode,
 		const std::vector<float*> q_matrices,
 		const std::vector<cuta::mode_t> q_matrix_modes,
 		float* const work_ptr,
