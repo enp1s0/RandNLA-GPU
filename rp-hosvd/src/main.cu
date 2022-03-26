@@ -25,9 +25,12 @@ void test_hosvd(
 	auto S_ptr = cutf::memory::malloc_async<float>(S_size, cuda_stream);
 
 	std::vector<float*> Q_ptrs(input_tensor_mode.size());
+	std::vector<cuta::mode_t> Q_modes(input_tensor_mode.size());
 	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
 		const auto malloc_size = input_tensor_mode[i].second * core_tensor_mode[i].second;
 		Q_ptrs[i] = cutf::memory::malloc_async<float>(malloc_size, cuda_stream);
+		Q_modes[i].push_back(input_tensor_mode[i]);
+		Q_modes[i].push_back(core_tensor_mode[i]);
 	}
 
 	hosvd.set_config(A_ptr, S_ptr, Q_ptrs);
@@ -35,6 +38,16 @@ void test_hosvd(
 	hosvd.prepare();
 
 	// tensor elements initialization
+	mtk::rsvd_test::contract(
+			hosvd.get_cutensor_handle(),
+			A_ptr,
+			S_ptr,
+			core_tensor_mode,
+			Q_ptrs,
+			Q_modes,
+			hosvd.get_work_mem_ptr(),
+			cuda_stream
+			);
 
 	// accuracy test
 	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));

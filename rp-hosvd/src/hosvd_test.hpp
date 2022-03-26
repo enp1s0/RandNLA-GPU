@@ -42,6 +42,7 @@ public:
 		cutensor_handle(cutensor_handle)	{}
 
 	std::string get_name_str() const {return std::string("hosvd-") + name;}
+	cutensorHandle_t get_cutensor_handle() {return cutensor_handle;};
 
 	void set_config(
 			float* const i_A_ptr,
@@ -67,6 +68,8 @@ public:
 			profiler.print_result();
 		}
 	}
+
+	virtual float* get_work_mem_ptr() = 0;
 };
 
 class hosvd_rp : public hosvd_base {
@@ -114,6 +117,7 @@ public:
 	void prepare();
 	void run();
 	void clean();
+	float* get_work_mem_ptr() {return working_memory.alloc_ptr;}
 };
 } // namespace rsvd_test
 } // namespace mtk
