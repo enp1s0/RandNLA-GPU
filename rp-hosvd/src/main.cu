@@ -91,6 +91,14 @@ void test_hosvd(
 			hosvd.get_work_mem_ptr(), input_size,
 			A_ptr, input_size
 			);
+	std::vector<double> orthogonalities(input_tensor_mode.size());
+	for (unsigned i = 0; i < input_tensor_mode.size(); i++) {
+		orthogonalities[i] = mtk::mateval::cuda::orthogonality(
+				Q_modes[i][0].second, Q_modes[i][1].second,
+				mtk::mateval::col_major,
+				Q_ptrs[i], Q_modes[i][0].second
+				);
+	}
 
 	CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 
@@ -128,6 +136,9 @@ void test_hosvd(
 
 	std::printf("%e,", elapsed_time);
 	std::printf("%e,", error.at(mtk::mateval::relative_residual));
+	for (const auto o : orthogonalities) {
+		std::printf("%e,", o);
+	}
 	std::printf("\n");
 }
 
