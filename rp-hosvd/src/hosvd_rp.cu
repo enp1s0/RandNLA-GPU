@@ -194,7 +194,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 		CUTF_CHECK_ERROR(cutf::cusolver::dn::geqrf(
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.geqrf_size[i],
@@ -204,7 +204,7 @@ void mtk::rsvd_test::hosvd_rp::run() {
 					cusolver_handle,
 					input_tensor_mode[i].second, core_tensor_mode[i].second,
 					core_tensor_mode[i].second,
-					working_memory.ttgt_ptr, input_tensor_mode[i].second,
+					Q_ptr[i], input_tensor_mode[i].second,
 					working_memory.tau_ptr,
 					working_memory.qr_ptr,
 					working_memory.orgqr_size[i],
