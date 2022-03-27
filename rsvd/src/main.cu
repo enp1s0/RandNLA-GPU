@@ -814,7 +814,9 @@ void image_decomp_core(
 			v_ptr, rsvd.get_n()
 			);
 	std::printf("%e,%e,%e\n", residual, u_orthogonality, v_orthogonality);
+	std::fflush(stdout);
 
+	cudaDeviceSynchronize();
 	rsvd.clean();
 }
 
@@ -973,7 +975,6 @@ void image_decomp(
 				// load
 				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
 			}
-			continue;
 			{
 				mtk::rsvd_test::svdj_cusolver rsvd(
 						*cusolver_handle.get(),
