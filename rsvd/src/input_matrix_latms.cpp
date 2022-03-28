@@ -1,6 +1,8 @@
 #include <vector>
 #include <input_matrix.hpp>
 #include <lapacke.h>
+#include <random>
+#include <memory>
 
 void mtk::rsvd_test::gen_latms_matrix(
 		float* const ptr,
@@ -125,4 +127,34 @@ void mtk::rsvd_test::gen_latms_designed_matrix(
 		ptr,
 		ld
 		);
+}
+
+void mtk::rsvd_test::gen_cauchy_matrix(
+		float* const ptr,
+		const std::size_t ld,
+		const std::size_t m,
+		const std::size_t n,
+		const std::uint64_t seed
+		) {
+	std::mt19937 mt(seed);
+	std::uniform_real_distribution<float> dist(0, 1);
+	auto x_array = std::unique_ptr<float>(new float[n]);
+	auto y_array = std::unique_ptr<float>(new float[m]);
+
+	x_array.get()[0] = 0;
+	for (std::size_t i = 1; i < n; i++) {
+		x_array.get()[i] = x_array.get()[i - 1] + dist(mt);
+	}
+	y_array.get()[0] = 0;
+	for (std::size_t i = 1; i < m; i++) {
+		y_array.get()[i] = y_array.get()[i - 1] + dist(mt);
+	}
+
+#pragma omp parallel for collapse(2)
+	for (std::size_t x = 0; x < n; x++) {
+		for (std::size_t y = 0; y < m; y++) {
+			const auto v = std::abs(x_array.get()[x] - y_array.get()[y]) + 0.1;
+			ptr[y + x * ld] = 1.f / v;
+		}
+	}
 }

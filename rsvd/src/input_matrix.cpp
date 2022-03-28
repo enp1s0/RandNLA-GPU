@@ -122,6 +122,13 @@ void mtk::rsvd_test::get_input_matrix(
 			seed
 			);
 		generated = true;
+	} else if (matrix_name_base == "cauchy") {
+		mtk::rsvd_test::gen_cauchy_matrix(
+			ptr, m,
+			m, n,
+			seed
+			);
+		generated = true;
 	}
 	const auto end_clock = std::chrono::system_clock::now();
 	const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;

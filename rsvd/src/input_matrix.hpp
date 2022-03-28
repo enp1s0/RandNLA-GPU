@@ -36,6 +36,13 @@ void gen_latms_sigmoid_matrix(
 		const std::size_t p,
 		const std::uint64_t seed
 		);
+void gen_cauchy_matrix(
+		float* const ptr,
+		const std::size_t ld,
+		const std::size_t m,
+		const std::size_t n,
+		const std::uint64_t seed
+		);
 void gen_latms_designed_matrix(
 		float* const ptr,
 		const std::size_t ld,
