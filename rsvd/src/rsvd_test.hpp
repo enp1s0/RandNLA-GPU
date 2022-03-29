@@ -64,11 +64,11 @@ public:
 	virtual void run() = 0;
 	virtual void clean() = 0;
 
-	unsigned get_m() const {return m;}
-	unsigned get_n() const {return n;}
-	unsigned get_k() const {return k;}
-	unsigned get_p() const {return p;}
-	unsigned get_n_iter() const {return n_iter;}
+	std::size_t get_m() const {return m;}
+	std::size_t get_n() const {return n;}
+	std::size_t get_k() const {return k;}
+	std::size_t get_p() const {return p;}
+	std::size_t get_n_iter() const {return n_iter;}
 
 	std::string get_name() const {
 		return name;
