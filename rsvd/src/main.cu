@@ -94,32 +94,13 @@ void evaluate(
 			const auto end_clock = std::chrono::system_clock::now();
 			const auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end_clock - start_clock).count() * 1e-6;
 			elapsed_time_sum += elapsed_time;
-			// Calculate the residual and orthogonality
-
-			residual_list[i] = mtk::mateval::cuda::residual_UxSxVt(
-					rsvd.get_m(), rsvd.get_n(), rsvd.get_k(),
-					mtk::mateval::col_major, mtk::mateval::col_major, mtk::mateval::col_major,
-					U_ptr, rsvd.get_m(),
-					S_ptr,
-					V_ptr, rsvd.get_n(),
-					hA_ptr, rsvd.get_m()
-					);
-			u_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
-					rsvd.get_m(), rsvd.get_k(),
-					mtk::mateval::col_major,
-					U_ptr, rsvd.get_m()
-					);
-			v_orthogonality_list[i] = mtk::mateval::cuda::orthogonality(
-					rsvd.get_n(), rsvd.get_k(),
-					mtk::mateval::col_major,
-					V_ptr, rsvd.get_n()
-					);
-			CUTF_CHECK_ERROR(cudaStreamSynchronize(cuda_stream));
 			rsvd.enable_breakdown_measurement();
 #ifdef TIME_BREAKDOWN
 			for (unsigned i = 0; i < additional_num_tests_for_time_breakdown; i++) {
 				rsvd.run();
 			}
+#else
+			std::printf("Add -DTIME_BREAKDOWN option to the compiler options\n");
 #endif
 
 		} catch (const std::exception& e) {
@@ -162,7 +143,7 @@ void breakdown_eval() {
 		{
 			const auto log_n = log_m;
 			const auto max_log_k = std::min(log_m, log_n);
-			for (unsigned log_k = 6; log_k <= max_log_k - 4; log_k++) {
+			for (unsigned log_k = 8; log_k <= max_log_k - 4; log_k++) {
 				const auto m = 1u << log_m;
 				const auto n = 1u << log_n;
 				const auto k = 1u << log_k;
@@ -172,7 +153,7 @@ void breakdown_eval() {
 					break;
 				}
 
-				const std::string matrix_name = "latms-" + std::to_string(k);
+				const std::string matrix_name = "cauchy";
 				
 				svd_t svd(*cusolver_handle.get());
 				{
