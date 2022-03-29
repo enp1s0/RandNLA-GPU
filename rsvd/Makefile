@@ -30,7 +30,7 @@ CXXFLAGS+=-I$(COMMON_SRCDIR)/mateval/include -L$(COMMON_SRCDIR)/mateval/build/ -
 CXXFLAGS+=-I$(COMMON_SRCDIR)/matfile/include
 CXXFLAGS+=-I$(COMMON_SRCDIR)/fphistogram/include
 
-NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler=$(OMPFLAGS)
+NVCCFLAGS=$(CXXFLAGS) --compiler-bindir=$(CXX) -Xcompiler="$(OMPFLAGS)"
 NVCCFLAGS+=-gencode arch=compute_80,code=sm_80
 NVCCFLAGS+=-gencode arch=compute_86,code=sm_86
 NVCCFLAGS+=-lcublas -lcusolver -rdc=true -lcurand
