@@ -172,7 +172,7 @@ void breakdown_eval() {
 					break;
 				}
 
-				const std::string matrix_name = "latms-" + std::to_string(k);
+				const std::string matrix_name = "cauchy";
 				
 				svd_t svd(*cusolver_handle.get());
 				{
