@@ -762,12 +762,17 @@ void watermark(
 
 void image_decomp_core(
 		mtk::rsvd_test::rsvd_base& rsvd,
-		const float* const input_ptr,
-		const float* const u_ptr,
-		const float* const s_ptr,
-		const float* const v_ptr
+		float* const input_ptr,
+		const float* const input_host_ptr,
+		float* const u_ptr,
+		float* const s_ptr,
+		float* const v_ptr
 		) {
+	rsvd.set_input_ptr(input_ptr);
+	rsvd.set_output_ptr(u_ptr, s_ptr, v_ptr);
+	cudaDeviceSynchronize();
 	rsvd.prepare();
+	cudaDeviceSynchronize();
 	rsvd.run();
 	cudaDeviceSynchronize();
 
@@ -775,14 +780,14 @@ void image_decomp_core(
 	const auto n = rsvd.get_n();
 	const auto decomp_k = rsvd.get_k();
 
-	std::printf("[%s] Largest sv = %e\n", rsvd.get_name().c_str(), s_ptr[0]);
+	//std::printf("[%s] Largest sv = %e\n", rsvd.get_name().c_str(), s_ptr[0]);
 	const auto residual = mtk::mateval::cuda::residual_UxSxVt(
 			rsvd.get_m(), rsvd.get_n(), rsvd.get_k(),
 			mtk::mateval::col_major, mtk::mateval::col_major, mtk::mateval::col_major,
 			u_ptr, rsvd.get_m(),
 			s_ptr,
 			v_ptr, rsvd.get_n(),
-			input_ptr, rsvd.get_m()
+			input_host_ptr, rsvd.get_m()
 			);
 	const auto u_orthogonality = mtk::mateval::cuda::orthogonality(
 			rsvd.get_m(), rsvd.get_k(),
@@ -794,7 +799,10 @@ void image_decomp_core(
 			mtk::mateval::col_major,
 			v_ptr, rsvd.get_n()
 			);
-	std::printf("%e,%e,%e\n", residual, u_orthogonality, v_orthogonality);
+	std::printf("%s,%lu,%lu,%lu,%e,%e,%e\n",
+			rsvd.get_name().c_str(),
+			m, n, decomp_k,
+		   	residual, u_orthogonality, v_orthogonality);
 	std::fflush(stdout);
 
 	cudaDeviceSynchronize();
@@ -819,21 +827,25 @@ void image_decomp(
 	mtk::shgemm::create(shgemm_handle);
 	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
 
-	auto image_matrix_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_height * max_image_width * 3);
+	auto host_image_matrix_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_height * max_image_width);
+	auto image_matrix_uptr = cutf::memory::get_device_unique_ptr<float>(max_image_height * max_image_width);
 
 	unsigned s_list_m, s_list_n;
 	mtk::matfile::load_size(s_list_m, s_list_n, s_list_name);
 
-	const auto max_rank = s_list_m;
+	const auto max_rank = std::max(max_image_width, max_image_height);
 	const auto s_list_size = s_list_n;
 	std::printf("# max_rank = %u, num_matrices = %u\n", max_rank, s_list_size);
 
-	auto s_list_matrix = cutf::memory::get_host_unique_ptr<float>(s_list_m * s_list_n);
-	mtk::matfile::load_dense(s_list_matrix.get(), s_list_m, s_list_name);
+	auto s_list_matrix = cutf::memory::get_host_unique_ptr<float>(max_rank);
 
-	auto s_uptr = cutf::memory::get_host_unique_ptr<float>(max_rank);
-	auto u_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_height * max_rank);
-	auto v_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_width * 3 * max_rank);
+	auto host_s_uptr = cutf::memory::get_host_unique_ptr<float>(max_rank);
+	auto host_u_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_height * max_rank);
+	auto host_v_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_width * max_rank);
+
+	auto s_uptr = cutf::memory::get_device_unique_ptr<float>(max_rank);
+	auto u_uptr = cutf::memory::get_device_unique_ptr<float>(max_image_height * max_rank);
+	auto v_uptr = cutf::memory::get_device_unique_ptr<float>(max_image_width * max_rank);
 
 	svd_t svd(*cusolver_handle.get());
 
@@ -851,18 +863,40 @@ void image_decomp(
 		const auto n = w;
 		const auto p = 10lu;
 
-		const auto s_list_ptr = s_list_matrix.get() + (s_list_index++) * s_list_m;
-		std::size_t decomp_k = 0;
-		for (unsigned mlog_s = 4; mlog_s <= 10; mlog_s++) {
+		mtk::matfile::load_dense(host_image_matrix_uptr.get(), h, file_name);
+		cutf::memory::copy(image_matrix_uptr.get(), host_image_matrix_uptr.get(), w * h);
+
+		mtk::rsvd_test::svd_cusolver svd_for_s(
+				*cusolver_handle.get(),
+				m, n, std::min(m, n), p, n_iter,
+				image_matrix_uptr.get(), m,
+				u_uptr.get(), m,
+				s_list_matrix.get(),
+				v_uptr.get(), n,
+				*cuda_stream.get()
+				);
+		svd_for_s.prepare();
+		svd_for_s.run();
+		cudaDeviceSynchronize();
+		mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(s_list_matrix.get(), std::min(m, n));
+
+		for (unsigned mlog_s = 3; mlog_s <= 10; mlog_s++) {
+			cutf::memory::copy(image_matrix_uptr.get(), host_image_matrix_uptr.get(), w * h);
+
+			double norm = 0.0f;
+#pragma omp parallel for reduction(+:norm)
+			for (std::size_t i = 0; i < h * w; i++) {
+				norm += host_image_matrix_uptr.get()[i] * host_image_matrix_uptr.get()[i];
+			}
+			norm = std::sqrt(norm);
+
 			const auto designed_error = std::pow<float>(10.f, -static_cast<float>(mlog_s));
-			while (decomp_k < (max_rank - p) && (s_list_ptr[decomp_k] / s_list_ptr[0]) > designed_error) {decomp_k++;};
+			std::size_t decomp_k = n-1;
+			double p_rank_error = 0.0;
+			for (; std::sqrt(p_rank_error) / norm < designed_error; p_rank_error += std::pow<double>(s_list_matrix.get()[decomp_k--], 2)){};
 
-			std::printf("input=(%lu, %lu), k = %lu, p = %lu, designed_error = %e\n", m, n, decomp_k, p, designed_error);
+			std::printf("input=(%lu, %lu), k = %lu, p = %lu, designed_error = %e, %e\n", m, n, decomp_k, p, designed_error, std::sqrt(p_rank_error) / norm);
 			std::fflush(stdout);
-
-			mtk::matfile::load_dense(image_matrix_uptr.get(), h, file_name);
-			//mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(image_matrix_uptr.get(), max_image_height * max_image_width);
-			printf("(2,1) = [[%e], [%e]]\n", image_matrix_uptr.get()[0], image_matrix_uptr.get()[1]);
 
 			// RSVD
 			{
@@ -882,7 +916,7 @@ void image_decomp(
 						);
 
 				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
+				image_decomp_core(rsvd, image_matrix_uptr.get(), host_image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
 			}
 			{
 				mtk::rsvd_test::random_projection_tf32 rand_proj(*cublas_handle.get());
@@ -901,9 +935,9 @@ void image_decomp(
 						);
 
 				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
+				image_decomp_core(rsvd, image_matrix_uptr.get(), host_image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
 			}
-			{
+			try {
 				mtk::rsvd_test::random_projection_shgemm rand_proj(shgemm_handle, mtk::shgemm::fp16);
 				mtk::rsvd_test::rsvd_selfmade rsvd(
 						*cublas_handle.get(),
@@ -920,9 +954,9 @@ void image_decomp(
 						);
 
 				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
-			}
-			{
+				image_decomp_core(rsvd, image_matrix_uptr.get(), host_image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
+			} catch(const std::exception& e){std::cout<<e.what()<<std::endl;}
+			try {
 				mtk::rsvd_test::random_projection_shgemm rand_proj(shgemm_handle, mtk::shgemm::tf32);
 				mtk::rsvd_test::rsvd_selfmade rsvd(
 						*cublas_handle.get(),
@@ -939,50 +973,21 @@ void image_decomp(
 						);
 
 				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
-			}
-			{
-				mtk::rsvd_test::rsvd_cusolver rsvd(
-						*cusolver_handle.get(),
-						*cusolver_params.get(),
-						m, n, decomp_k, p, n_iter,
-						image_matrix_uptr.get(), m,
-						u_uptr.get(), m,
-						s_uptr.get(),
-						v_uptr.get(), n,
-						*cuda_stream.get()
-						);
-
-				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
-			}
-			{
-				mtk::rsvd_test::svdj_cusolver rsvd(
-						*cusolver_handle.get(),
-						m, n, decomp_k, p, n_iter,
-						image_matrix_uptr.get(), m,
-						u_uptr.get(), m,
-						s_uptr.get(),
-						v_uptr.get(), n,
-						*cuda_stream.get()
-						);
-
-				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
-			}
+				image_decomp_core(rsvd, image_matrix_uptr.get(), host_image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
+			} catch(const std::exception& e){std::cout<<e.what()<<std::endl;}
 			{
 				mtk::rsvd_test::svd_cusolver rsvd(
 						*cusolver_handle.get(),
 						m, n, decomp_k, p, n_iter,
-						image_matrix_uptr.get(), m,
-						u_uptr.get(), m,
-						s_uptr.get(),
-						v_uptr.get(), n,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
 						*cuda_stream.get()
 						);
 
 				// load
-				image_decomp_core(rsvd, image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
+				image_decomp_core(rsvd, image_matrix_uptr.get(), host_image_matrix_uptr.get(), u_uptr.get(), s_uptr.get(), v_uptr.get());
 			}
 		}
 	}
