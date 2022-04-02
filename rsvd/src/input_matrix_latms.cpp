@@ -137,23 +137,21 @@ void mtk::rsvd_test::gen_cauchy_matrix(
 		const std::uint64_t seed
 		) {
 	std::mt19937 mt(seed);
-	std::uniform_real_distribution<float> dist(0, 1);
+	std::uniform_real_distribution<float> dist(-0.001, 0.001);
 	auto x_array = std::unique_ptr<float>(new float[n]);
 	auto y_array = std::unique_ptr<float>(new float[m]);
 
-	x_array.get()[0] = 0;
-	for (std::size_t i = 1; i < n; i++) {
-		x_array.get()[i] = x_array.get()[i - 1] + dist(mt);
+	for (std::size_t i = 0; i < n; i++) {
+		x_array.get()[i] = dist(mt);
 	}
-	y_array.get()[0] = 0;
-	for (std::size_t i = 1; i < m; i++) {
-		y_array.get()[i] = y_array.get()[i - 1] + dist(mt);
+	for (std::size_t i = 0; i < m; i++) {
+		y_array.get()[i] = dist(mt);
 	}
 
 #pragma omp parallel for collapse(2)
 	for (std::size_t x = 0; x < n; x++) {
 		for (std::size_t y = 0; y < m; y++) {
-			const auto v = std::abs(x_array.get()[x] - y_array.get()[y]) + 0.1;
+			const auto v = std::abs(x_array.get()[x] - y_array.get()[y]) + 0.0001;
 			ptr[y + x * ld] = 1.f / v;
 		}
 	}
