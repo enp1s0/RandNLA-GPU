@@ -7,7 +7,7 @@ void mtk::rsvd_test::random_projection_shgemm::gen_rand(const std::uint64_t seed
 	mtk::curand_fp16::create(gen, CURAND_RNG_PSEUDO_XORWOW);
 	mtk::curand_fp16::set_seed(gen, seed);
 	mtk::curand_fp16::set_cuda_stream(gen, cuda_stream);
-	mtk::curand_fp16::uniform(gen, rand_matrix_ptr, get_max_src_n() * get_max_target_rank());
+	mtk::curand_fp16::normal(gen, rand_matrix_ptr, get_max_src_n() * get_max_target_rank(), 0, 1);
 	mtk::curand_fp16::destroy(gen);
 }
 
