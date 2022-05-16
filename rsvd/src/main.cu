@@ -504,6 +504,24 @@ void designed_accuracy_test() {
 						);
 				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
 			}
+			{
+				const float D = std::min(m, n);
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "sqrtD", {-std::sqrt(std::sqrt(D)), 0.f, std::sqrt(std::sqrt(D))}, {1.f, 2 * std::sqrt(D) - 2, 1.f});
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_discrete
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
 			continue;
 #endif
 			{
