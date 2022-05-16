@@ -3,6 +3,7 @@
 #include <string>
 #include <shgemm/shgemm.hpp>
 #include <cutf/cublas.hpp>
+#include <vector>
 
 namespace mtk {
 namespace rsvd_test {
@@ -53,8 +54,6 @@ public:
 };
 
 class random_projection_fp32 : public random_projection_base {
-	const std::string name;
-
 	float* rand_matrix_ptr;
 
 	cublasHandle_t cublas_handle;
@@ -73,8 +72,6 @@ public:
 };
 
 class random_projection_tf32 : public random_projection_base {
-	const std::string name;
-
 	float* rand_matrix_ptr;
 
 	cublasHandle_t cublas_handle;
@@ -92,8 +89,6 @@ public:
 };
 
 class random_projection_shgemm : public random_projection_base {
-	const std::string name;
-
 	half* rand_matrix_ptr;
 
 	mtk::shgemm::shgemmHandle_t& shgemm_handle;
@@ -102,6 +97,23 @@ public:
 	random_projection_shgemm(
 			mtk::shgemm::shgemmHandle_t& shgemm_handle, const mtk::shgemm::tc_t compute_type
 			) : random_projection_base(std::string("rndprj_shgemm_") + (compute_type == mtk::shgemm::fp16 ? "fp16" : "tf32")), shgemm_handle(shgemm_handle), compute_type(compute_type) {}
+
+	void allocate_working_memory();
+	void free_working_memory();
+	void gen_rand(const std::uint64_t seed);
+	void apply(
+			const std::size_t m, const std::size_t n, const std::size_t r,
+			float* const dst_ptr, const std::size_t ldd,
+			float* const src_ptr, const std::size_t lds
+			);
+};
+
+class random_projection_discrete : public random_projection_base {
+	float* rand_matrix_ptr;
+
+	cublasHandle_t cublas_handle;
+public:
+	random_projection_discrete(cublasHandle_t const cublas_handle, const std::string rand_name, const std::vector<float>& random_candidates) : random_projection_base("rndprj_discrete_" + rand_name), cublas_handle(cublas_handle) {}
 
 	void allocate_working_memory();
 	void free_working_memory();
