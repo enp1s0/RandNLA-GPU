@@ -839,7 +839,6 @@ void image_decomp_core(
 
 void image_decomp(
 		const std::string list_file_name,
-		const std::string s_list_name,
 		const std::size_t max_image_width,
 		const std::size_t max_image_height
 		) {
@@ -858,12 +857,7 @@ void image_decomp(
 	auto host_image_matrix_uptr = cutf::memory::get_host_unique_ptr<float>(max_image_height * max_image_width);
 	auto image_matrix_uptr = cutf::memory::get_device_unique_ptr<float>(max_image_height * max_image_width);
 
-	unsigned s_list_m, s_list_n;
-	mtk::matfile::load_size(s_list_m, s_list_n, s_list_name);
-
 	const auto max_rank = std::max(max_image_width, max_image_height);
-	const auto s_list_size = s_list_n;
-	std::printf("# max_rank = %u, num_matrices = %u\n", max_rank, s_list_size);
 
 	auto s_list_matrix = cutf::memory::get_host_unique_ptr<float>(max_rank);
 
@@ -879,7 +873,6 @@ void image_decomp(
 
 	std::ifstream ifs(list_file_name);
 	std::string file_name;
-	unsigned s_list_index = 0;
 	while (std::getline(ifs, file_name)) {
 		std::size_t w, h;
 		mtk::matfile::load_size(h, w, file_name);
@@ -1026,7 +1019,7 @@ int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
 	} else if (argc == 4 && std::string(argv[1]) == "image") {
-		image_decomp(argv[2], argv[3], 5000, 5000);
+		image_decomp(argv[2], 5000, 5000);
 	} else if (argc == 2 && std::string(argv[1]) == "breakdown") {
 		breakdown_eval();
 	} else if (argc == 2 && std::string(argv[1]) == "designed") {
