@@ -54,7 +54,7 @@ __global__ void cut_mantissa_kernel(
 	auto v = cutf::experimental::fp::reinterpret_as_fp<T>(
 			cutf::experimental::fp::reinterpret_as_uint<typename cutf::experimental::fp::same_size_fp<T>::type>(ptr[tid]) & (~((1u << (cutf::experimental::fp::get_mantissa_size<T>() - remain_mantissa_length)) - 1))
 			);
-	if (cutf::type::cast<float>(v) < 1.f / (1u << 25)) {
+	if (std::abs(cutf::type::cast<float>(v)) < 1.f / (1u << 25)) {
 		v = 0;
 	}
 	ptr[tid] = v;
