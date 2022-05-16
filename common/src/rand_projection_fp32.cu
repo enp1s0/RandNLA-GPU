@@ -2,12 +2,16 @@
 #include <cutf/cublas.hpp>
 #include <cutf/memory.hpp>
 #include <rand_projection_base.hpp>
+#include "cuda_common.hpp"
 
 void mtk::rsvd_test::random_projection_fp32::gen_rand(const std::uint64_t seed) {
 	auto cugen = cutf::curand::get_curand_unique_ptr(CURAND_RNG_PSEUDO_PHILOX4_32_10);
 	CUTF_CHECK_ERROR(curandSetPseudoRandomGeneratorSeed(*cugen.get(), seed));
 	CUTF_CHECK_ERROR(curandSetStream(*cugen.get(), cuda_stream));
-	CUTF_CHECK_ERROR(cutf::curand::generate_uniform(*cugen.get(), rand_matrix_ptr, get_max_src_n() * get_max_target_rank()));
+	CUTF_CHECK_ERROR(cutf::curand::generate_normal(*cugen.get(), rand_matrix_ptr, get_max_src_n() * get_max_target_rank(), 0, 1));
+	if (ml >= 0) {
+		mtk::rsvd_test::cut_mantissa(rand_matrix_ptr, get_max_src_n() * get_max_target_rank(), ml, cuda_stream);
+	}
 }
 
 void mtk::rsvd_test::random_projection_fp32::apply(

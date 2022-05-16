@@ -58,8 +58,9 @@ class random_projection_fp32 : public random_projection_base {
 	float* rand_matrix_ptr;
 
 	cublasHandle_t cublas_handle;
+	const int ml;
 public:
-	random_projection_fp32(cublasHandle_t const cublas_handle) : random_projection_base("rndprj_FP32"), cublas_handle(cublas_handle) {}
+	random_projection_fp32(cublasHandle_t const cublas_handle, const int ml = -1) : random_projection_base("rndprj_FP32"), cublas_handle(cublas_handle), ml(ml) {}
 
 	void allocate_working_memory();
 	void free_working_memory();
