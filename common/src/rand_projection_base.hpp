@@ -112,8 +112,8 @@ class random_projection_discrete : public random_projection_base {
 	float* rand_matrix_ptr;
 
 	cublasHandle_t cublas_handle;
-	const std::vector<float>& random_candidates;
-	const std::vector<float>& random_candidate_probs;
+	const std::vector<float> random_candidates;
+	const std::vector<float> random_candidate_probs;
 public:
 	random_projection_discrete(cublasHandle_t const cublas_handle,
 			const std::string rand_name,

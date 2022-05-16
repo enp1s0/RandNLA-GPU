@@ -20,11 +20,11 @@ __global__ void rand_kernel(
 		return;
 	}
 
-	curandStateXORWOW_t curand_status;
-	curand_init(seed, tid, 0, &curand_status);
+	curandState curand_state;
+	curand_init(seed, tid, 0, &curand_state);
 
 	for (unsigned i = tid; i < array_size; i += gridDim.x * blockDim.x) {
-		const auto r = static_cast<float>(curand(&curand_status)) / 0x100000000lu;
+		const auto r = curand_uniform(&curand_state);
 		std::size_t j = 0;
 		for (; j < candidates_size - 1; j++) {
 			if (r < candidates_prob_ptr[j]) {
@@ -33,16 +33,17 @@ __global__ void rand_kernel(
 		}
 		__syncwarp();
 
-		dst_ptr[tid] = candidates_ptr[j];
+		dst_ptr[i] = candidates_ptr[j];
 	}
 }
-}
+} // unnamed namespace
 
 void mtk::rsvd_test::random_projection_discrete::gen_rand(const std::uint64_t seed) {
 	std::vector<float> acc_rands;
 	acc_rands.push_back(random_candidate_probs[0]);
 	for (unsigned i = 1; i < random_candidate_probs.size(); i++) {
-		acc_rands.push_back(acc_rands[i - 1] + random_candidate_probs[i]);
+		const auto v = acc_rands[acc_rands.size() - 1] + random_candidate_probs[i];
+		acc_rands.push_back(v);
 	}
 	for (auto &p : acc_rands) {
 		p /= acc_rands[acc_rands.size() - 1];
@@ -50,8 +51,8 @@ void mtk::rsvd_test::random_projection_discrete::gen_rand(const std::uint64_t se
 	
 	auto dev_rand_candidates      = cutf::memory::malloc_async<float>(acc_rands.size(), cuda_stream);
 	auto dev_rand_candidate_probs = cutf::memory::malloc_async<float>(acc_rands.size(), cuda_stream);
-	cutf::memory::copy_async(dev_rand_candidates, random_candidates.data(), acc_rands.size(), cuda_stream);
-	cutf::memory::copy_async(dev_rand_candidate_probs, acc_rands.data()   , acc_rands.size(), cuda_stream);
+	cutf::memory::copy_async(dev_rand_candidates     , random_candidates.data(), acc_rands.size(), cuda_stream);
+	cutf::memory::copy_async(dev_rand_candidate_probs, acc_rands.data()        , acc_rands.size(), cuda_stream);
 
 	rand_kernel<<<256, 256, 0, cuda_stream>>>(
 			rand_matrix_ptr, get_max_src_n() * get_max_target_rank(),
