@@ -446,6 +446,28 @@ void designed_accuracy_test() {
 
 			svd_t svd(*cusolver_handle.get());
 
+#ifdef CUT_MANTISSA
+			const std::vector<int> mantissa_length_list = {0, 5, 10, 15, 23};
+			for (int ml : mantissa_length_list) {
+				std::printf("%u,", ml);
+				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get(), ml);
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_fp32
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			continue;
+#endif
 			{
 				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(

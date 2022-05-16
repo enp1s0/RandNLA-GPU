@@ -1,6 +1,7 @@
 #include <cutf/memory.hpp>
 #include <curand_fp16/curand_fp16.hpp>
 #include <rand_projection_base.hpp>
+#include "cuda_common.hpp"
 
 void mtk::rsvd_test::random_projection_shgemm::gen_rand(const std::uint64_t seed) {
 	mtk::curand_fp16::generator_t gen;
