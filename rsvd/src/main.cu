@@ -468,6 +468,44 @@ void designed_accuracy_test() {
 			}
 			continue;
 #endif
+
+#ifdef DISCRETE_RAND_TEST
+			{
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "signed1", {-1.f, 1.f}, {1.f, 1.f});
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_discrete
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "sqrt3", {-std::sqrt(3.f), 0.f, std::sqrt(3.f)}, {1.f, 4.f, 1.f});
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_discrete
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			continue;
+#endif
 			{
 				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get());
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
