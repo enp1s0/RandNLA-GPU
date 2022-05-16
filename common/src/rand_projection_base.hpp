@@ -112,8 +112,17 @@ class random_projection_discrete : public random_projection_base {
 	float* rand_matrix_ptr;
 
 	cublasHandle_t cublas_handle;
+	const std::vector<float>& random_candidates;
+	const std::vector<float>& random_candidate_probs;
 public:
-	random_projection_discrete(cublasHandle_t const cublas_handle, const std::string rand_name, const std::vector<float>& random_candidates) : random_projection_base("rndprj_discrete_" + rand_name), cublas_handle(cublas_handle) {}
+	random_projection_discrete(cublasHandle_t const cublas_handle,
+			const std::string rand_name,
+			const std::vector<float>& random_candidates,
+			const std::vector<float>& random_candidate_probs
+			) : random_projection_base("rndprj_discrete_" + rand_name), cublas_handle(cublas_handle),
+	random_candidate_probs(random_candidate_probs),
+	random_candidates(random_candidates)
+	{}
 
 	void allocate_working_memory();
 	void free_working_memory();
