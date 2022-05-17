@@ -1018,7 +1018,7 @@ void image_decomp(
 int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
-	} else if (argc == 4 && std::string(argv[1]) == "image") {
+	} else if (argc == 3 && std::string(argv[1]) == "image") {
 		image_decomp(argv[2], 5000, 5000);
 	} else if (argc == 2 && std::string(argv[1]) == "breakdown") {
 		breakdown_eval();
