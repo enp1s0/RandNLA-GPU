@@ -12,6 +12,7 @@
 #include <mateval/comparison_cuda.hpp>
 #include <matfile/matfile.hpp>
 #include <fphistogram/fphistogram.hpp>
+#include <lapacke.h>
 
 constexpr unsigned min_log_m = 11;
 constexpr unsigned max_log_m = 13;
@@ -29,6 +30,33 @@ constexpr unsigned additional_num_tests_for_time_breakdown = 20;
 
 
 namespace {
+
+void svd(int matrix_layout, char jobu, char jobvt, lapack_int m, lapack_int n, double* a, lapack_int lda, double* s, double* u, lapack_int ldu, double* vt, lapack_int ldvt, double* work, lapack_int lwork) {
+	LAPACKE_dgesvd_work(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork);
+}
+
+void svd(int matrix_layout, char jobu, char jobvt, lapack_int m, lapack_int n, float* a, lapack_int lda, float* s, float* u, lapack_int ldu, float* vt, lapack_int ldvt, float* work, lapack_int lwork) {
+	LAPACKE_sgesvd_work(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork);
+}
+
+template <class T>
+void get_singular_value(
+		T* const s_ptr,
+		const std::size_t m, const std::size_t n,
+		T* const a_ptr, const std::size_t lda
+		) {
+	int lwork = -1;
+	T* work = nullptr;
+	T tmp;
+	svd(LAPACK_COL_MAJOR, 'N', 'N', m, n, a_ptr, lda, s_ptr, nullptr, 1, nullptr, 1, &tmp, lwork);
+
+	lwork = static_cast<int>(tmp);
+	work = new T [lwork];
+	svd(LAPACK_COL_MAJOR, 'N', 'N', m, n, a_ptr, lda, s_ptr, nullptr, 1, nullptr, 1, work, lwork);
+
+	delete [] work;
+}
+
 std::vector<std::string> str_split(const std::string str, const char d) {
 	std::vector<std::string> strings;
 	std::stringstream ss(str);
@@ -447,7 +475,7 @@ void designed_accuracy_test() {
 			svd_t svd(*cusolver_handle.get());
 
 #ifdef CUT_MANTISSA
-			const std::vector<int> mantissa_length_list = {0, 5, 10, 15, 23};
+			const std::vector<int> mantissa_length_list = {0, 4};
 			for (int ml : mantissa_length_list) {
 				std::printf("%u,", ml);
 				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get(), ml);
@@ -885,36 +913,51 @@ void image_decomp(
 		const auto p = 10lu;
 
 		mtk::matfile::load_dense(host_image_matrix_uptr.get(), h, file_name);
+
+		double norm = 0.0f;
+#pragma omp parallel for reduction(+:norm)
+		for (std::size_t i = 0; i < h * w; i++) {
+			host_image_matrix_uptr.get()[i] *= 1e-17;
+			norm += host_image_matrix_uptr.get()[i] * host_image_matrix_uptr.get()[i];
+		}
+		norm = std::sqrt(norm);
+
 		cutf::memory::copy(image_matrix_uptr.get(), host_image_matrix_uptr.get(), w * h);
 
-		mtk::rsvd_test::svd_cusolver svd_for_s(
-				*cusolver_handle.get(),
-				m, n, std::min(m, n), p, n_iter,
-				image_matrix_uptr.get(), m,
-				u_uptr.get(), m,
-				s_list_matrix.get(),
-				v_uptr.get(), n,
-				*cuda_stream.get()
-				);
-		svd_for_s.prepare();
-		svd_for_s.run();
+		auto A_dp_uptr = std::unique_ptr<double[]>(new double[m * n]);
+#pragma omp parallel for
+		for (std::size_t i = 0; i < m * n; i++) {
+			A_dp_uptr.get()[i] = host_image_matrix_uptr.get()[i];
+		}
+		std::printf("Compute singular values ...\n");
+		std::fflush(stdout);
+		std::vector<double> s_computed(std::min(m, n));
+		get_singular_value(s_computed.data(), m, n, A_dp_uptr.get(), m);
+
+		for (int i = 0; i < s_computed.size(); i++) {
+			s_computed[i] /= norm;
+		}
+
+		double sum_sp = 0;
+		for (int i = s_computed.size() - 1; i >= 0; i--) {
+			const double sum_sp_prev = sum_sp;
+			sum_sp += s_computed.data()[i] * s_computed.data()[i];
+			if (sum_sp_prev != 0 && static_cast<int>(std::log10(std::sqrt(sum_sp_prev))) != static_cast<int>(std::log10(std::sqrt(sum_sp)))) {
+				std::printf("rank = %d, error = %e\n", i, std::sqrt(sum_sp));
+			}
+		}
+
 		cudaDeviceSynchronize();
-		mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(s_list_matrix.get(), std::min(m, n));
+		mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(host_image_matrix_uptr.get(), m * n);
+
 
 		for (unsigned mlog_s = 3; mlog_s <= 10; mlog_s++) {
 			cutf::memory::copy(image_matrix_uptr.get(), host_image_matrix_uptr.get(), w * h);
 
-			double norm = 0.0f;
-#pragma omp parallel for reduction(+:norm)
-			for (std::size_t i = 0; i < h * w; i++) {
-				norm += host_image_matrix_uptr.get()[i] * host_image_matrix_uptr.get()[i];
-			}
-			norm = std::sqrt(norm);
-
 			const auto designed_error = std::pow<float>(10.f, -static_cast<float>(mlog_s));
 			std::size_t decomp_k = n-1;
 			double p_rank_error = 0.0;
-			for (; std::sqrt(p_rank_error) / norm < designed_error; p_rank_error += std::pow<double>(s_list_matrix.get()[decomp_k--], 2)){};
+			for (; std::sqrt(p_rank_error) < designed_error; p_rank_error += [](const double x) -> double {return x * x;}(s_computed.data()[decomp_k--])){};
 
 			std::printf("input=(%lu, %lu), k = %lu, p = %lu, designed_error = %e, %e\n", m, n, decomp_k, p, designed_error, std::sqrt(p_rank_error) / norm);
 			std::fflush(stdout);
@@ -1019,7 +1062,7 @@ int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
 	} else if (argc == 3 && std::string(argv[1]) == "image") {
-		image_decomp(argv[2], 5000, 5000);
+		image_decomp(argv[2], 10000, 10000);
 	} else if (argc == 2 && std::string(argv[1]) == "breakdown") {
 		breakdown_eval();
 	} else if (argc == 2 && std::string(argv[1]) == "designed") {
