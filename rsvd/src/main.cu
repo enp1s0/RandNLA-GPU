@@ -417,6 +417,96 @@ void accuracy_test() {
 	mtk::shgemm::destroy(shgemm_handle);
 }
 
+void sparse_accuracy_test() {
+	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
+	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
+	auto cusolver_params = cutf::cusolver::dn::get_params_unique_ptr();
+	auto cublas_handle = cutf::cublas::get_cublas_unique_ptr();
+	CUTF_CHECK_ERROR(cusolverDnSetStream(*cusolver_handle.get(), *cuda_stream.get()));
+	CUTF_CHECK_ERROR(cusolverDnSetAdvOptions(*cusolver_params.get(), CUSOLVERDN_GETRF, CUSOLVER_ALG_0));
+	CUTF_CHECK_ERROR(cublasSetStream(*cublas_handle.get(), *cuda_stream.get()));
+
+	mtk::shgemm::shgemmHandle_t shgemm_handle;
+	mtk::shgemm::create(shgemm_handle);
+	mtk::shgemm::set_cuda_stream(shgemm_handle, *cuda_stream.get());
+
+	std::vector<std::string> matrix_list = {"linear", "exp"};
+	const std::size_t mat_N = 1u << 12;
+
+	const std::size_t m = mat_N;
+	const std::size_t n = mat_N;
+	const std::size_t decomp_k = mat_N / 16;
+
+	print_csv_header();
+	for (const auto& matrix : matrix_list) {
+		for (int log_s_p = -10; log_s_p <= -3; log_s_p++) {
+			const auto p = 32;
+
+			const std::string matrix_name = "designed-" + matrix + "-" + std::to_string(decomp_k) + "-" + std::to_string(-log_s_p);
+
+			svd_t svd(*cusolver_handle.get());
+
+			const std::vector<int> mantissa_length_list = {0, 4};
+			for (int ml : mantissa_length_list) {
+				std::printf("cut_mantissa_%u-", ml);
+				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get(), ml);
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_fp32
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "sqrt3", {-std::sqrt(3.f), 0.f, std::sqrt(3.f)}, {1.f, 4.f, 1.f});
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_discrete
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+			{
+				const float D = std::min(m, n);
+				const unsigned s = 1750;
+				const float s_fp = s;
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "s" + std::to_string(s), {-std::sqrt(s_fp), 0.f, std::sqrt(s_fp)}, {1.f, 2.f * s_fp - 2, 1.f});
+				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
+						*cublas_handle.get(),
+						*cusolver_handle.get(),
+						*cusolver_params.get(),
+						m, n, decomp_k, p, n_iter,
+						nullptr, m,
+						nullptr, m,
+						nullptr,
+						nullptr, n,
+						*cuda_stream.get(),
+						svd,
+						rand_proj_discrete
+						);
+				evaluate(matrix_name, rsvd_selfmade, n_tests, *cuda_stream.get());
+			}
+		}
+	}
+	mtk::shgemm::destroy(shgemm_handle);
+}
+
 void designed_accuracy_test() {
 	auto cuda_stream  = cutf::stream::get_stream_unique_ptr();
 	auto cusolver_handle = cutf::cusolver::dn::get_handle_unique_ptr();
@@ -447,7 +537,7 @@ void designed_accuracy_test() {
 			svd_t svd(*cusolver_handle.get());
 
 #ifdef CUT_MANTISSA
-			const std::vector<int> mantissa_length_list = {0, 5, 10, 15, 23};
+			const std::vector<int> mantissa_length_list = {0, 4};
 			for (int ml : mantissa_length_list) {
 				std::printf("%u,", ml);
 				mtk::rsvd_test::random_projection_fp32 rand_proj_fp32(*cublas_handle.get(), ml);
@@ -506,7 +596,9 @@ void designed_accuracy_test() {
 			}
 			{
 				const float D = std::min(m, n);
-				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "sqrtD", {-std::sqrt(std::sqrt(D)), 0.f, std::sqrt(std::sqrt(D))}, {1.f, 2 * std::sqrt(D) - 2, 1.f});
+				const unsigned s = 1750;
+				const float s_fp = s;
+				mtk::rsvd_test::random_projection_discrete rand_proj_discrete(*cublas_handle.get(), "s" + std::to_string(s), {-std::sqrt(s_fp), 0.f, std::sqrt(s_fp)}, {1.f, 2.f * s_fp - 2, 1.f});
 				mtk::rsvd_test::rsvd_selfmade rsvd_selfmade(
 						*cublas_handle.get(),
 						*cusolver_handle.get(),
@@ -1087,6 +1179,8 @@ int main(int argc, char** argv) {
 		breakdown_eval();
 	} else if (argc == 2 && std::string(argv[1]) == "designed") {
 		designed_accuracy_test();
+	} else if (argc == 2 && std::string(argv[1]) == "sparse") {
+		sparse_accuracy_test();
 	} else {
 		accuracy_test();
 	}
