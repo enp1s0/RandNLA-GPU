@@ -90,6 +90,7 @@ public:
 
 class random_projection_shgemm : public random_projection_base {
 	half* rand_matrix_ptr;
+	float* fp32_rand_matrix_ptr;
 
 	mtk::shgemm::shgemmHandle_t& shgemm_handle;
 	const mtk::shgemm::tc_t compute_type;

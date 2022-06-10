@@ -1,4 +1,6 @@
+#include <iostream>
 #include <rsvd_test.hpp>
+#include <stdexcept>
 #include <cuda_common.hpp>
 #include <cutf/type.hpp>
 
@@ -27,6 +29,9 @@ void mtk::rsvd_test::svd_cusolver::prepare() {
 void mtk::rsvd_test::svd_cusolver::run() {
 	const std::size_t r_work = std::min(get_m(), get_n()) - 1;
 	const std::size_t l_work = working_memory_device_size - r_work;
+	if (get_n() > get_m()) {
+		throw std::runtime_error("gesvd only supports m>=n");
+	}
 	CUTF_CHECK_ERROR(cusolverDnSgesvd(
 				cusolver_handle,
 				'S', 'S',
