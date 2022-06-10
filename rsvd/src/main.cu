@@ -1104,7 +1104,8 @@ void image_decomp(
 			double p_rank_error = 0.0;
 			for (; std::sqrt(p_rank_error) < designed_error; p_rank_error += [](const double x) -> double {return x * x;}(s_computed.data()[decomp_k--])){};
 
-			std::printf("input=(%lu, %lu), k = %lu, p = %lu, designed_error = %e, %e\n", m, n, decomp_k, p, designed_error, std::sqrt(p_rank_error) / norm);
+			std::printf("input=(%lu, %lu), k = %lu, p = %lu, theoretical_error = %e, (%e)\n", m, n, decomp_k, p, std::sqrt(p_rank_error) / norm, designed_error);
+			std::printf("mode,m,n,rank,residual,v_orth,u_orth\n");
 			std::fflush(stdout);
 
 			// RSVD
@@ -1207,7 +1208,7 @@ int main(int argc, char** argv) {
 	if (argc == 4 && std::string(argv[1]) == "watermark") {
 		watermark(argv[2], argv[3], 4032, 4032);
 	} else if (argc == 3 && std::string(argv[1]) == "image") {
-		image_decomp(argv[2], 10000, 10000);
+		image_decomp(argv[2], 5000, 5000);
 	} else if (argc == 2 && std::string(argv[1]) == "breakdown") {
 		breakdown_eval();
 	} else if (argc == 2 && std::string(argv[1]) == "designed") {
