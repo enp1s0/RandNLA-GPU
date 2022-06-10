@@ -917,7 +917,6 @@ void image_decomp(
 		double norm = 0.0f;
 #pragma omp parallel for reduction(+:norm)
 		for (std::size_t i = 0; i < h * w; i++) {
-			host_image_matrix_uptr.get()[i] *= 1e-17;
 			norm += host_image_matrix_uptr.get()[i] * host_image_matrix_uptr.get()[i];
 		}
 		norm = std::sqrt(norm);
@@ -948,8 +947,6 @@ void image_decomp(
 		}
 
 		cudaDeviceSynchronize();
-		mtk::fphistogram::print_histogram<float, mtk::fphistogram::mode_log10>(host_image_matrix_uptr.get(), m * n);
-
 
 		for (unsigned mlog_s = 3; mlog_s <= 10; mlog_s++) {
 			cutf::memory::copy(image_matrix_uptr.get(), host_image_matrix_uptr.get(), w * h);
